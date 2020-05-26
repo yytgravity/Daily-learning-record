@@ -11,7 +11,7 @@
 
 > 传送门: [GraVity0-stl](https://github.com/yytgravity/Daily-learning-record/tree/master/第1～2周/GraVity0_stl)
 
-##### Question 1 ： vector编写过程中的安全问题思考：
+### Question 1 ： vector编写过程中的安全问题思考：
 - [x] 1、 浅拷贝引起的double free：
     首先我们先看一段代码
     
@@ -259,7 +259,7 @@ int main()
 
 可以看到输出中调用的析构函数和要删除的对象并不匹配。
 
-##### Question 2 ：为什么实现了uninitialized_xxx和copy/fill这样两组不同的函数：
+### Question 2 ：为什么实现了uninitialized_xxx和copy/fill这样两组不同的函数：
 copy/fill 是调用重载的运算符=，这就需要复制的目的地已经初始化。
 uninitialized_copy/fill 是依次调用拷贝构造函数。目标区间是未初始化的，应该用uninitialized_copy/fill。
 
