@@ -9,7 +9,7 @@
 <details>
 <summary>Week1～2: 学习编写简单的sgi stl</summary>
 
-> 传送门: [GraVity0-stl]()
+> 传送门: [GraVity0-stl](https://github.com/yytgravity/Daily-learning-record/tree/master/第1～2周/GraVity0_stl)
 
 ##### Question 1 ： vector编写过程中的安全问题思考：
 - [x] 1、 浅拷贝引起的double free：
@@ -160,7 +160,7 @@ int main(int argc, char* argv[])
 也可以避免double free。
 
 - [x] 2、de1ctf stl题目的思考：
-> 传送门: [题目和exp]()
+> 传送门: [题目和exp](https://github.com/yytgravity/Daily-learning-record/tree/master/第1～2周/de1ctf-stl_container)
 题目的漏洞位置： 在erase的操作过程中出现了double free
 
 ```
