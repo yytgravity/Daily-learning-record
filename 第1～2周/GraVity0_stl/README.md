@@ -689,3 +689,4 @@ vector<_Tp,_Alloc>::operator=(const vector<_Tp, _Alloc>& __x)
   return *this;
 }
 ```
+### 参考资料：[stl源码刨析](https://www.kancloud.cn/digest/stl-sources/177267)
