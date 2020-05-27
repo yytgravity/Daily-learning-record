@@ -19,7 +19,7 @@
  - [临时对象的产生与运用](https://www.cnblogs.com/wuchanming/p/4060461.html)
  - [仿函数实现详解](https://blog.csdn.net/u010710458/article/details/79734558)
  - [increment/decrement/dereference操作符](https://www.cnblogs.com/wuchanming/p/4060585.html)
-. 泛型指针、原生指针和智能指针：
+5. 泛型指针、原生指针和智能指针：
   - 泛型指针
 泛型指针有多种含义。
      - (1) 指void*指针，可以指向任意数据类型，因此具有“泛型”含义。
