@@ -48,3 +48,80 @@
 4. 代码可以去看下上面的代码，在代码中有相应的注释。
 
 #### 迭代器(iterator)
+1. STL的中心思想在于：将数据容器和算法分开，彼此独立设计，最后再以一贴胶合剂（iterator）将它们撮合在一起。迭代器（Iterator）模式--提供一种方法，使之能够依序寻访某个聚合物（容器）所含的各个元素，而又无需暴露该聚合物的内部表达方式。
+
+  - STL的中心思想在于：将数据容器和算法分开，彼此独立设计，最后再以一贴胶合剂（iterator）将它们撮合在一起。
+  
+ - 迭代器是数据结构容器中非常有用的“特殊指针”，在不暴露容器中结构的条件下，可以取出容器里所有的元素。
+1. iterator框架：
+
+* 调用接口
+
+```
+template<class _Category, class _Tp, class _Distance = ptrdiff_t, class _Pointer=_Tp *, class _Reference = _Tp &>
+    struct iterator {
+        typedef _Category iterator_category;
+        typedef _Tp value_type;
+        typedef _Distance difference_type;
+        typedef _Pointer pointer;
+        typedef _Reference reference;
+    };
+    
+```
+* 迭代器的分类
+
+```
+/*
+输入迭代器input_iterator：只读，且只能一次读操作，支持操作：++p,p++,!=,==,=*p,p->；
+输出迭代器output_iterator：只写，且只能一次写操作，支持操作：++p,p++；
+正向迭代器forward_iterator：可多次读写，支持输入输出迭代器的所有操作；
+双向迭代器bidirectional_iterator：支持正向迭代器的所有操作，且支持操作：--p,--p；
+随机访问迭代器random_access_iterator：除了支持双向迭代器操作外，还支持：p[n],p+n,n+p,p-n,p+=n,p-=n,p1-p2,p1<p2,p1>p2,p1>=p2,p1<=p2；
+*/
+struct input_iterator_tag {};
+struct output_iterator_tag {};
+struct forward_iterator_tag : public input_iterator_tag {};
+struct bidirectional_iterator_tag : public forward_iterator_tag {};
+struct random_access_iterator_tag : public bidirectional_iterator_tag {};
+
+template <class _Tp, class _Distance> struct input_iterator {
+  typedef input_iterator_tag iterator_category;
+  typedef _Tp                value_type;
+  typedef _Distance          difference_type;
+  typedef _Tp*               pointer;
+  typedef _Tp&               reference;
+};
+
+struct output_iterator {
+  typedef output_iterator_tag iterator_category;
+  typedef void                value_type;
+  typedef void                difference_type;
+  typedef void                pointer;
+  typedef void                reference;
+};
+
+template <class _Tp, class _Distance> struct forward_iterator {
+  typedef forward_iterator_tag iterator_category;
+  typedef _Tp                  value_type;
+  typedef _Distance            difference_type;
+  typedef _Tp*                 pointer;
+  typedef _Tp&                 reference;
+};
+
+template <class _Tp, class _Distance> struct bidirectional_iterator {
+  typedef bidirectional_iterator_tag iterator_category;
+  typedef _Tp                        value_type;
+  typedef _Distance                  difference_type;
+  typedef _Tp*                       pointer;
+  typedef _Tp&                       reference;
+};
+
+template <class _Tp, class _Distance> struct random_access_iterator {
+  typedef random_access_iterator_tag iterator_category;
+  typedef _Tp                        value_type;
+  typedef _Distance                  difference_type;
+  typedef _Tp*                       pointer;
+  typedef _Tp&                       reference;
+};
+
+```
