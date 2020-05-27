@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
         printf("copy assign function\r\n");
     }
 ```
-如果去掉其中的浅拷贝，也将是想下面这样则不会触发double free。
+如果去掉其中的浅拷贝，也就是像下面这样则不会触发double free。
 ```
     test(const test& src)
     {
