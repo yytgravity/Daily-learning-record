@@ -268,5 +268,10 @@ uninitialized_copy/fill 是依次调用拷贝构造函数。目标区间是未�
   - 1、如果已经构造的区域，被uninitialized_xxx再次构造，在uninitialized_xxx构造之前，并不会调用之前类的析构函数，可能存在潜在的泄漏（比如复制构造函数的主体抛出，会出现内存泄漏？）
  - 2、fill错误使用：这个就可能性很多了（未定义）。
  
+### Question 3 ：绘制每个容器在内存里的对象存储图
+![](img/9.png)
+![](img/10.png)
+![](img/11.png)
+
 </details>
 
