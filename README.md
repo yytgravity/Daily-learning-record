@@ -362,7 +362,15 @@ int main() {
 <details>
 <summary>Week3～4: 学习编写简单的内核</summary>
 
-> 传送门: [GraVity0-kernel]()
+> 第一章基础知识学习: [第一章](https://github.com/yytgravity/Daily-learning-record/tree/master/第3～4周/第1章)
+
+> 第二章学习: [第二章](https://github.com/yytgravity/Daily-learning-record/tree/master/第3～4周/第2章)
+
+> 第三章学习: [第三章](https://github.com/yytgravity/Daily-learning-record/tree/master/第3～4周/第3章)
+
+> 第四章学习: [第四章](https://github.com/yytgravity/Daily-learning-record/tree/master/第3～4周/第4章) 
+
+> 第五章学习: [第五章](https://github.com/yytgravity/Daily-learning-record/tree/master/第3～4周/第5章)
 
 参考的书籍 《操作系统真象还原》
 
