@@ -360,17 +360,28 @@ int main() {
 </details>
 
 <details>
+<summary>Week2.5～3:（番外）学习hongfuzz</summary>
+笔记有点乱，之后整理一下再放上来。
+
+</details>
+
+
+<details>
 <summary>Week3～4: 学习编写简单的内核</summary>
 
-> 第一章基础知识学习: [第一章](https://github.com/yytgravity/Daily-learning-record/tree/master/第3～4周/第1章)
+> 第一章笔记+代码: [第一章](https://github.com/yytgravity/Daily-learning-record/tree/master/第3～4周/第1章)
 
-> 第二章学习: [第二章](https://github.com/yytgravity/Daily-learning-record/tree/master/第3～4周/第2章)
+> 第二章笔记+代码: [第二章](https://github.com/yytgravity/Daily-learning-record/tree/master/第3～4周/第2章)
 
-> 第三章学习: [第三章](https://github.com/yytgravity/Daily-learning-record/tree/master/第3～4周/第3章)
+> 第三章笔记+代码: [第三章](https://github.com/yytgravity/Daily-learning-record/tree/master/第3～4周/第3章)
 
-> 第四章学习: [第四章](https://github.com/yytgravity/Daily-learning-record/tree/master/第3～4周/第4章) 
+> 第四章笔记+代码: [第四章](https://github.com/yytgravity/Daily-learning-record/tree/master/第3～4周/第4章) 
 
-> 第五章学习: [第五章](https://github.com/yytgravity/Daily-learning-record/tree/master/第3～4周/第5章)
+> 第五章笔记+代码: [第五章](https://github.com/yytgravity/Daily-learning-record/tree/master/第3～4周/第5章)
+
+> 第六章笔记+代码: [第六章](https://github.com/yytgravity/Daily-learning-record/tree/master/第3～4周/第6章)
+
+> 第七章笔记+代码: [第七章](https://github.com/yytgravity/Daily-learning-record/tree/master/第3～4周/第7章) 
 
 参考的书籍 《操作系统真象还原》
 
