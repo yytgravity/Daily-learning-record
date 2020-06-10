@@ -381,7 +381,7 @@ setup_page:
 ### 加载内核
 1. 将内核文件写进磁盘
 ```
-gcc -c -o main.o main.c && ldmain.o -Ttext 0xc0001500 -e main -o kernel.bin && dd if=kernel.bin of=/ypur_path/hd60M.img bs=512 count=200 seek=9 conv=notrunc
+gcc -c -o main.o main.c && ld main.o -Ttext 0xc0001500 -e main -o kernel.bin && dd if=kernel.bin of=/ypur_path/hd60M.img bs=512 count=200 seek=9 conv=notrunc
 ```
 
 2. loader.S需要实现的功能
