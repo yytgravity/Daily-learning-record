@@ -1,5 +1,11 @@
 #honggfuzz基础和Full-speed Fuzzing
 
+这篇文章主要记录了结合projectzero的Fuzzing ImageIO来学习Full-speed Fuzzing
+
+Full-speed Fuzzing的论文：传送门: [Full-speed Fuzzing](https://arxiv.org/abs/1812.11875?context=cs.CR)
+
+- 本文发表在IEEE Symposium on Security and Privacy 2019，作者是来自弗吉尼亚理工学院的研究团队。
+
 ### honggfuzz基础学习
 - 此部分主要为后面的论文学习做铺垫。（参考泉哥的博文）
 -  计算代码覆盖率的三个单位：
@@ -33,7 +39,7 @@
 上文提到Full-speed Fuzzing的第一步为：在每一个未覆盖的基本块的开始处插入一个特殊的中断指令，生成一个新的程序。所以我们就需要获取基本块的偏移。
 
 <details>
-<summary>通过简单的IDAPython脚本完成枚举程序/库中每个基本块的起始偏移量。</summary>
+<summary>通过简单的IDAPython脚本完成枚举库中每个基本块的起始偏移量。</summary>
 ```
 import idautils
 import idaapi
@@ -82,7 +88,7 @@ print("Done, found {} patchpoints".format(len(patchpoints)))
 </details>
 
 接下来是基于Full-speed Fuzzing的fuzz方法的实现
-</details>
+<details>
 <summary>trap fuzz方法的实现。</summary>
 首先根据trapfuzz.patches中的library name，也就是imageio，获取的到库基地址
 - 从dyld获取所有加载模块的列表，task_info()将获得给定任务的dyld的all_image_info结构体的地址，从中我们可以获得所有模块的名称和加载地址
@@ -160,7 +166,7 @@ void initializeTrapfuzz() {
         ............
         
 ```
-
+下面在进行fuzzing的进程用断点指令（Intel上的int3）替换每个未发现的基本块的首字节，并且将位图索引以及原始值存储在shadow memory中
 ```
 void initializeTrapfuzz() {
         
@@ -201,15 +207,54 @@ void initializeTrapfuzz() {
     free(line);
     fclose(patches);
 ```
+通过sigaction(SIGTRAP, &s, 0);安装一个SIGTRAP处理程序，他在捕获到SIGTRAP信号时，调用我们设置好的信号处理函数：sigtrap_handler。
 ```
     // Install signal handler for SIGTRAP.
     struct sigaction s;
-    s.sa_flags = SA_SIGINFO;        // TODO add SA_NODEFER?
+    s.sa_flags = SA_SIGINFO;        
     s.sa_sigaction = sigtrap_handler;
     sigemptyset(&s.sa_mask);
     sigaction(SIGTRAP, &s, 0);
 }
 ```
+sigtrap_handler的代码实现：
+功能：
+- 检索故障地址并计算库中的偏移量以及shadow memory中相应条目的地址
+- 将基本块标记为在全局覆盖位图中找到
+- 用原始字节替换断点
+- 恢复执行
+```
+static void sigtrap_handler(int signum, siginfo_t* si, void* context) {
+    // Must re-execute the instruction, so decrement PC by one instruction.
+#if defined(__APPLE__) && defined(__LP64__)
+    ucontext_t* ctx = (ucontext_t*)context;
+    ctx->uc_mcontext->__ss.__rip -= 1;
+#else
+#error "Unsupported platform"
+#endif
+
+    uint8_t* faultaddr = (uint8_t*)si->si_addr - 1;
+    // If the trap didn't come from our instrumentation, then we probably will just segfault here
+    uint32_t shadow = *SHADOW(faultaddr);
+
+    uint8_t orig_byte = shadow & 0xff;
+    uint32_t index = shadow >> 8;
+
+    // Index zero is invalid so that it is still possible to catch actual trap instructions in instrumented libraries.
+    if (index == 0) {
+        abort();
+    }
+    // Restore original instruction
+    *faultaddr = orig_byte;
+
+    // Update coverage information.
+    bool prev = ATOMIC_XCHG(feedback->pcGuardMap[index], true);
+    if (prev == false) {
+        ATOMIC_PRE_INC_RELAXED(feedback->pidFeedbackEdge[my_thread_no]);
+    }
+}
+```
+
 </details>
 
 
