@@ -37,7 +37,9 @@ Full-speed Fuzzing的论文传送门: [Full-speed Fuzzing](https://arxiv.org/abs
 上文提到Full-speed Fuzzing的第一步为：在每一个未覆盖的基本块的开始处插入一个特殊的中断指令，生成一个新的程序。所以我们就需要获取基本块的偏移。
 
 <details>
-<summary>通过简单的IDAPython脚本完成枚举库中每个基本块的起始偏移量。</summary>
+<summary>通过简单的IDAPython脚本完成枚举库中每个基本块的起始偏移量。</summary>     
+
+
 ```
 import idautils
 import idaapi
