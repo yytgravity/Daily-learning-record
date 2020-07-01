@@ -85,11 +85,15 @@ print("Done, found {} patchpoints".format(len(patchpoints)))
 [运行结果](/img/trapfuzz.patches)
 </details>
 
+
 接下来是基于Full-speed Fuzzing的fuzz方法的实现
+
 <details>
 <summary>trap fuzz方法的实现。</summary>
+
 首先根据trapfuzz.patches中的library name，也就是imageio，获取的到库基地址
 - 从dyld获取所有加载模块的列表，task_info()将获得给定任务的dyld的all_image_info结构体的地址，从中我们可以获得所有模块的名称和加载地址
+
 
 ```
 #include <mach-o/dyld_images.h>
@@ -113,13 +117,17 @@ static void* find_library_load_address(const char* library_name) {
   return NULL;
 }
 ```
+
 接下来我们来创建shadow memory，在shadow memory中，我们需要为每个patch存储4字节（3字节位图索引，1字节原始值）,操作如下：
+
 ```
     uint32_t* shadow = SHADOW(lib_base + offset);
     uint8_t orig_byte = lib_base[offset];
     *shadow = (bitmap_index << 8) | orig_byte;
 ```
+
 下面是创建shadow memory的代码：
+
 ```
 #define SHADOW(addr) ((uint32_t*)(((uintptr_t)addr & 0xfffffffffffffffc) - 0x200000000000 - ((uintptr_t)addr & 0x3)*0x10000000000))
 
@@ -164,7 +172,9 @@ void initializeTrapfuzz() {
         ............
         
 ```
+
 下面在进行fuzzing的进程用断点指令（Intel上的int3）替换每个未发现的基本块的首字节，并且将位图索引以及原始值存储在shadow memory中
+
 ```
 void initializeTrapfuzz() {
         
@@ -205,7 +215,9 @@ void initializeTrapfuzz() {
     free(line);
     fclose(patches);
 ```
+
 通过sigaction(SIGTRAP, &s, 0);安装一个SIGTRAP处理程序，他在捕获到SIGTRAP信号时，调用我们设置好的信号处理函数：sigtrap_handler。
+
 ```
     // Install signal handler for SIGTRAP.
     struct sigaction s;
@@ -215,12 +227,14 @@ void initializeTrapfuzz() {
     sigaction(SIGTRAP, &s, 0);
 }
 ```
+
 sigtrap_handler的代码实现：
 功能：
 - 检索故障地址并计算库中的偏移量以及shadow memory中相应条目的地址
 - 将基本块标记为在全局覆盖位图中找到
 - 用原始字节替换断点
 - 恢复执行
+
 ```
 static void sigtrap_handler(int signum, siginfo_t* si, void* context) {
     // Must re-execute the instruction, so decrement PC by one instruction.
@@ -252,7 +266,6 @@ static void sigtrap_handler(int signum, siginfo_t* si, void* context) {
     }
 }
 ```
-
 </details>
 
 
