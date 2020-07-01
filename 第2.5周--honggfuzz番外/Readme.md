@@ -2,7 +2,7 @@
 
 这篇文章主要记录了结合projectzero的Fuzzing ImageIO来学习Full-speed Fuzzing
 
-Full-speed Fuzzing的论文：传送门: [Full-speed Fuzzing](https://arxiv.org/abs/1812.11875?context=cs.CR)
+Full-speed Fuzzing的论文传送门: [Full-speed Fuzzing](https://arxiv.org/abs/1812.11875?context=cs.CR)
 
 - 本文发表在IEEE Symposium on Security and Privacy 2019，作者是来自弗吉尼亚理工学院的研究团队。
 
