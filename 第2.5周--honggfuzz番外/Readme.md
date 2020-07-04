@@ -18,6 +18,8 @@ Full-speed Fuzzing的论文传送门: [Full-speed Fuzzing](https://arxiv.org/abs
   - 通过ida可以很直观的看到，此时出现了条件判断，如果a为假将会直接执行到c，如果我们采用基本块的方式，就无法确切的知道是否曾经从a执行到c。这时候就引出了边界。![](img/3.jpg)
     如上图edge会在A跟C之间建立虚拟块D，通过判断D是否执行过，来确认是否曾从A执行到C。
 
+流程分析之前写在了github上：[honggfuzz流程分析](https://github.com/yytgravity/Daily-learning-record)
+
     
 ### Full-speed Fuzzing
 #### 技术简介
