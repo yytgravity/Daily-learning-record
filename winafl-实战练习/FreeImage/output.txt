@@ -1,0 +1,497 @@
+   1: 1000f7d0          @!"FreeImage!FreeImage_AllocateHeaderForBits"
+breakpoint 2 redefined
+  2: 1000f810          @!"FreeImage!FreeImage_AllocateHeaderT"
+breakpoint 3 redefined
+  3: 1000f850          @!"FreeImage!FreeImage_AllocateHeader"
+breakpoint 4 redefined
+  4: 1000f880          @!"FreeImage!FreeImage_Allocate"
+breakpoint 5 redefined
+  5: 1000f8b0          @!"FreeImage!FreeImage_AllocateT"
+breakpoint 6 redefined
+  6: 1000f8e0          @!"FreeImage!FreeImage_Unload"
+breakpoint 7 redefined
+  7: 1000fa60          @!"FreeImage!FreeImage_Clone"
+breakpoint 8 redefined
+  8: 1000fde0          @!"FreeImage!FreeImage_GetBits"
+breakpoint 9 redefined
+  9: 1000fe40          @!"FreeImage!FreeImage_GetThumbnail"
+breakpoint 10 redefined
+ 10: 1000fe60          @!"FreeImage!FreeImage_SetThumbnail"
+breakpoint 11 redefined
+ 11: 1000fec0          @!"FreeImage!FreeImage_GetColorType"
+breakpoint 12 redefined
+ 12: 100100e0          @!"FreeImage!FreeImage_GetImageType"
+breakpoint 13 redefined
+ 13: 10010100          @!"FreeImage!FreeImage_HasPixels"
+breakpoint 14 redefined
+ 14: 10010120          @!"FreeImage!FreeImage_HasRGBMasks"
+breakpoint 15 redefined
+ 15: 10010150          @!"FreeImage!FreeImage_GetRedMask"
+breakpoint 16 redefined
+ 16: 10010190          @!"FreeImage!FreeImage_GetGreenMask"
+breakpoint 17 redefined
+ 17: 100101e0          @!"FreeImage!FreeImage_GetBlueMask"
+breakpoint 18 redefined
+ 18: 10010230          @!"FreeImage!FreeImage_HasBackgroundColor"
+breakpoint 19 redefined
+ 19: 10010250          @!"FreeImage!FreeImage_GetBackgroundColor"
+breakpoint 20 redefined
+ 20: 100102f0          @!"FreeImage!FreeImage_SetBackgroundColor"
+breakpoint 21 redefined
+ 21: 10010330          @!"FreeImage!FreeImage_IsTransparent"
+breakpoint 22 redefined
+ 22: 100103a0          @!"FreeImage!FreeImage_GetTransparencyTable"
+breakpoint 23 redefined
+ 23: 100103c0          @!"FreeImage!FreeImage_SetTransparent"
+breakpoint 24 redefined
+ 24: 10010400          @!"FreeImage!FreeImage_GetTransparencyCount"
+breakpoint 25 redefined
+ 25: 10010420          @!"FreeImage!FreeImage_SetTransparencyTable"
+breakpoint 26 redefined
+ 26: 100104c0          @!"FreeImage!FreeImage_SetTransparentIndex"
+breakpoint 27 redefined
+ 27: 10010520          @!"FreeImage!FreeImage_GetTransparentIndex"
+breakpoint 28 redefined
+ 28: 10010560          @!"FreeImage!FreeImage_GetICCProfile"
+breakpoint 29 redefined
+ 29: 10010580          @!"FreeImage!FreeImage_CreateICCProfile"
+breakpoint 30 redefined
+ 30: 100105d0          @!"FreeImage!FreeImage_DestroyICCProfile"
+breakpoint 31 redefined
+ 31: 10010610          @!"FreeImage!FreeImage_GetWidth"
+breakpoint 32 redefined
+ 32: 10010630          @!"FreeImage!FreeImage_GetHeight"
+breakpoint 33 redefined
+ 33: 10010650          @!"FreeImage!FreeImage_GetBPP"
+breakpoint 34 redefined
+ 34: 10010670          @!"FreeImage!FreeImage_GetLine"
+breakpoint 35 redefined
+ 35: 100106a0          @!"FreeImage!FreeImage_GetPitch"
+breakpoint 36 redefined
+ 36: 100106d0          @!"FreeImage!FreeImage_GetColorsUsed"
+breakpoint 37 redefined
+ 37: 100106f0          @!"FreeImage!FreeImage_GetDIBSize"
+breakpoint 38 redefined
+ 38: 10010730          @!"FreeImage!FreeImage_GetPalette"
+breakpoint 39 redefined
+ 39: 10010760          @!"FreeImage!FreeImage_GetDotsPerMeterX"
+breakpoint 40 redefined
+ 40: 10010780          @!"FreeImage!FreeImage_GetDotsPerMeterY"
+breakpoint 41 redefined
+ 41: 100107a0          @!"FreeImage!FreeImage_SetDotsPerMeterX"
+breakpoint 42 redefined
+ 42: 100107c0          @!"FreeImage!FreeImage_SetDotsPerMeterY"
+breakpoint 43 redefined
+ 43: 100107e0          @!"FreeImage!FreeImage_GetInfoHeader"
+breakpoint 44 redefined
+ 44: 10010810          @!"FreeImage!FreeImage_GetInfo"
+breakpoint 45 redefined
+ 45: 10010820          @!"FreeImage!FreeImage_FindFirstMetadata"
+breakpoint 46 redefined
+ 46: 100108e0          @!"FreeImage!FreeImage_FindNextMetadata"
+breakpoint 47 redefined
+ 47: 10010960          @!"FreeImage!FreeImage_FindCloseMetadata"
+breakpoint 48 redefined
+ 48: 10010990          @!"FreeImage!FreeImage_CloneMetadata"
+breakpoint 49 redefined
+ 49: 10010ba0          @!"FreeImage!FreeImage_SetMetadata"
+breakpoint 50 redefined
+ 50: 10010e60          @!"FreeImage!FreeImage_GetMetadata"
+breakpoint 51 redefined
+ 51: 10010f10          @!"FreeImage!FreeImage_SetMetadataKeyValue"
+breakpoint 52 redefined
+ 52: 10010fc0          @!"FreeImage!FreeImage_GetMetadataCount"
+breakpoint 53 redefined
+ 53: 10011040          @!"FreeImage!FreeImage_GetMemorySize"
+breakpoint 54 redefined
+ 54: 10013850          @!"FreeImage!FreeImage_LookupX11Color"
+breakpoint 55 redefined
+ 55: 10013940          @!"FreeImage!FreeImage_LookupSVGColor"
+breakpoint 56 redefined
+ 56: 10013a30          @!"FreeImage!FreeImage_ConvertToRGBA16"
+breakpoint 57 redefined
+ 57: 10013cb0          @!"FreeImage!FreeImage_ConvertToRGBAF"
+breakpoint 58 redefined
+ 58: 10014330          @!"FreeImage!FreeImage_GetVersion"
+breakpoint 59 redefined
+ 59: 10014350          @!"FreeImage!FreeImage_GetCopyrightMessage"
+breakpoint 60 redefined
+ 60: 10014360          @!"FreeImage!FreeImage_IsLittleEndian"
+breakpoint 61 redefined
+ 61: 10014370          @!"FreeImage!FreeImage_SetOutputMessage"
+breakpoint 62 redefined
+ 62: 10014380          @!"FreeImage!FreeImage_SetOutputMessageStdCall"
+breakpoint 63 redefined
+ 63: 10014390          @!"FreeImage!FreeImage_OutputMessageProc"
+breakpoint 64 redefined
+ 64: 100145d0          @!"FreeImage!FreeImage_GetFileTypeFromHandle"
+breakpoint 65 redefined
+ 65: 10014640          @!"FreeImage!FreeImage_GetFileType"
+breakpoint 66 redefined
+ 66: 100146a0          @!"FreeImage!FreeImage_GetFileTypeU"
+breakpoint 67 redefined
+ 67: 10014b30          @!"FreeImage!FreeImage_OpenMemory"
+breakpoint 68 redefined
+ 68: 10014ba0          @!"FreeImage!FreeImage_CloseMemory"
+breakpoint 69 redefined
+ 69: 10014be0          @!"FreeImage!FreeImage_LoadFromMemory"
+breakpoint 70 redefined
+ 70: 10014c20          @!"FreeImage!FreeImage_SaveToMemory"
+breakpoint 71 redefined
+ 71: 10014c60          @!"FreeImage!FreeImage_AcquireMemory"
+breakpoint 72 redefined
+ 72: 10014c90          @!"FreeImage!FreeImage_GetFileTypeFromMemory"
+breakpoint 73 redefined
+ 73: 10014cc0          @!"FreeImage!FreeImage_SeekMemory"
+breakpoint 74 redefined
+ 74: 10014d00          @!"FreeImage!FreeImage_TellMemory"
+breakpoint 75 redefined
+ 75: 10014d30          @!"FreeImage!FreeImage_ReadMemory"
+breakpoint 76 redefined
+ 76: 10014d70          @!"FreeImage!FreeImage_WriteMemory"
+breakpoint 77 redefined
+ 77: 10014db0          @!"FreeImage!FreeImage_GetScanLine"
+breakpoint 78 redefined
+ 78: 10014df0          @!"FreeImage!FreeImage_GetPixelIndex"
+breakpoint 79 redefined
+ 79: 10014ee0          @!"FreeImage!FreeImage_GetPixelColor"
+breakpoint 80 redefined
+ 80: 100150c0          @!"FreeImage!FreeImage_SetPixelIndex"
+breakpoint 81 redefined
+ 81: 100151c0          @!"FreeImage!FreeImage_SetPixelColor"
+breakpoint 82 redefined
+ 82: 10018c10          @!"FreeImage!FreeImage_Initialise"
+breakpoint 83 redefined
+ 83: 10018fa0          @!"FreeImage!FreeImage_DeInitialise"
+breakpoint 84 redefined
+ 84: 10019010          @!"FreeImage!FreeImage_LoadFromHandle"
+breakpoint 85 redefined
+ 85: 10019090          @!"FreeImage!FreeImage_Load"
+breakpoint 86 redefined
+ 86: 10019100          @!"FreeImage!FreeImage_LoadU"
+breakpoint 87 redefined
+ 87: 10019160          @!"FreeImage!FreeImage_SaveToHandle"
+breakpoint 88 redefined
+ 88: 100191f0          @!"FreeImage!FreeImage_Save"
+breakpoint 89 redefined
+ 89: 10019260          @!"FreeImage!FreeImage_SaveU"
+breakpoint 90 redefined
+ 90: 100192c0          @!"FreeImage!FreeImage_RegisterLocalPlugin"
+breakpoint 91 redefined
+ 91: 100192e0          @!"FreeImage!FreeImage_RegisterExternalPlugin"
+breakpoint 92 redefined
+ 92: 10019340          @!"FreeImage!FreeImage_SetPluginEnabled"
+breakpoint 93 redefined
+ 93: 10019370          @!"FreeImage!FreeImage_IsPluginEnabled"
+breakpoint 94 redefined
+ 94: 100193a0          @!"FreeImage!FreeImage_GetFIFCount"
+breakpoint 95 redefined
+ 95: 100193b0          @!"FreeImage!FreeImage_GetFIFFromFormat"
+breakpoint 96 redefined
+ 96: 100193e0          @!"FreeImage!FreeImage_GetFIFFromMime"
+breakpoint 97 redefined
+ 97: 10019410          @!"FreeImage!FreeImage_GetFormatFromFIF"
+breakpoint 98 redefined
+ 98: 10019440          @!"FreeImage!FreeImage_GetFIFMimeType"
+breakpoint 99 redefined
+ 99: 10019470          @!"FreeImage!FreeImage_GetFIFExtensionList"
+breakpoint 100 redefined
+100: 100194b0          @!"FreeImage!FreeImage_GetFIFDescription"
+breakpoint 101 redefined
+101: 100194f0          @!"FreeImage!FreeImage_GetFIFRegExpr"
+breakpoint 102 redefined
+102: 10019530          @!"FreeImage!FreeImage_FIFSupportsReading"
+breakpoint 103 redefined
+103: 10019560          @!"FreeImage!FreeImage_FIFSupportsWriting"
+breakpoint 104 redefined
+104: 10019590          @!"FreeImage!FreeImage_FIFSupportsExportBPP"
+breakpoint 105 redefined
+105: 100195c0          @!"FreeImage!FreeImage_FIFSupportsExportType"
+breakpoint 106 redefined
+106: 100195f0          @!"FreeImage!FreeImage_FIFSupportsICCProfiles"
+breakpoint 107 redefined
+107: 10019620          @!"FreeImage!FreeImage_FIFSupportsNoPixels"
+breakpoint 108 redefined
+108: 10019650          @!"FreeImage!FreeImage_GetFIFFromFilename"
+breakpoint 109 redefined
+109: 10019780          @!"FreeImage!FreeImage_GetFIFFromFilenameU"
+breakpoint 110 redefined
+110: 10042a50          @!"FreeImage!FreeImage_ColorQuantize"
+breakpoint 111 redefined
+111: 10042a70          @!"FreeImage!FreeImage_ColorQuantizeEx"
+breakpoint 112 redefined
+112: 10042c10          @!"FreeImage!FreeImage_ConvertFromRawBitsEx"
+breakpoint 113 redefined
+113: 10042cc0          @!"FreeImage!FreeImage_ConvertFromRawBits"
+breakpoint 114 redefined
+114: 10042cf0          @!"FreeImage!FreeImage_ConvertToRawBits"
+breakpoint 115 redefined
+115: 100437d0          @!"FreeImage!FreeImage_ConvertLine1To16_555"
+breakpoint 116 redefined
+116: 10043850          @!"FreeImage!FreeImage_ConvertLine4To16_555"
+breakpoint 117 redefined
+117: 100438d0          @!"FreeImage!FreeImage_ConvertLine8To16_555"
+breakpoint 118 redefined
+118: 10043940          @!"FreeImage!FreeImage_ConvertLine16_565_To16_555"
+breakpoint 119 redefined
+119: 10043a00          @!"FreeImage!FreeImage_ConvertLine24To16_555"
+breakpoint 120 redefined
+120: 10043a60          @!"FreeImage!FreeImage_ConvertLine32To16_555"
+breakpoint 121 redefined
+121: 10043ac0          @!"FreeImage!FreeImage_ConvertTo16Bits555"
+breakpoint 122 redefined
+122: 10043db0          @!"FreeImage!FreeImage_ConvertLine1To16_565"
+breakpoint 123 redefined
+123: 10043e30          @!"FreeImage!FreeImage_ConvertLine4To16_565"
+breakpoint 124 redefined
+124: 10043eb0          @!"FreeImage!FreeImage_ConvertLine8To16_565"
+breakpoint 125 redefined
+125: 10043f20          @!"FreeImage!FreeImage_ConvertLine16_555_To16_565"
+breakpoint 126 redefined
+126: 10043fe0          @!"FreeImage!FreeImage_ConvertLine24To16_565"
+breakpoint 127 redefined
+127: 10044040          @!"FreeImage!FreeImage_ConvertLine32To16_565"
+breakpoint 128 redefined
+128: 100440a0          @!"FreeImage!FreeImage_ConvertTo16Bits565"
+breakpoint 129 redefined
+129: 10044390          @!"FreeImage!FreeImage_ConvertLine1To24"
+breakpoint 130 redefined
+130: 10044400          @!"FreeImage!FreeImage_ConvertLine4To24"
+breakpoint 131 redefined
+131: 10044480          @!"FreeImage!FreeImage_ConvertLine8To24"
+breakpoint 132 redefined
+132: 100444e0          @!"FreeImage!FreeImage_ConvertLine16To24_555"
+breakpoint 133 redefined
+133: 10044590          @!"FreeImage!FreeImage_ConvertLine16To24_565"
+breakpoint 134 redefined
+134: 10044630          @!"FreeImage!FreeImage_ConvertLine32To24"
+breakpoint 135 redefined
+135: 10044680          @!"FreeImage!FreeImage_ConvertTo24Bits"
+breakpoint 136 redefined
+136: 10044af0          @!"FreeImage!FreeImage_ConvertLine1To32"
+breakpoint 137 redefined
+137: 10044b60          @!"FreeImage!FreeImage_ConvertLine4To32"
+breakpoint 138 redefined
+138: 10044bf0          @!"FreeImage!FreeImage_ConvertLine8To32"
+breakpoint 139 redefined
+139: 10044c50          @!"FreeImage!FreeImage_ConvertLine16To32_555"
+breakpoint 140 redefined
+140: 10044d00          @!"FreeImage!FreeImage_ConvertLine16To32_565"
+breakpoint 141 redefined
+141: 10044db0          @!"FreeImage!FreeImage_ConvertLine24To32"
+breakpoint 142 redefined
+142: 10044fa0          @!"FreeImage!FreeImage_ConvertTo32Bits"
+breakpoint 143 redefined
+143: 10045540          @!"FreeImage!FreeImage_ConvertLine1To4"
+breakpoint 144 redefined
+144: 100455b0          @!"FreeImage!FreeImage_ConvertLine8To4"
+breakpoint 145 redefined
+145: 10045660          @!"FreeImage!FreeImage_ConvertLine16To4_555"
+breakpoint 146 redefined
+146: 100457b0          @!"FreeImage!FreeImage_ConvertLine16To4_565"
+breakpoint 147 redefined
+147: 10045900          @!"FreeImage!FreeImage_ConvertLine24To4"
+breakpoint 148 redefined
+148: 100459b0          @!"FreeImage!FreeImage_ConvertLine32To4"
+breakpoint 149 redefined
+149: 10045a60          @!"FreeImage!FreeImage_ConvertTo4Bits"
+breakpoint 150 redefined
+150: 10045d10          @!"FreeImage!FreeImage_ConvertLine1To8"
+breakpoint 151 redefined
+151: 10045d50          @!"FreeImage!FreeImage_ConvertLine4To8"
+breakpoint 152 redefined
+152: 10045d90          @!"FreeImage!FreeImage_ConvertLine16To8_555"
+breakpoint 153 redefined
+153: 10045e50          @!"FreeImage!FreeImage_ConvertLine16To8_565"
+breakpoint 154 redefined
+154: 10045f20          @!"FreeImage!FreeImage_ConvertLine24To8"
+breakpoint 155 redefined
+155: 10045fb0          @!"FreeImage!FreeImage_ConvertLine32To8"
+breakpoint 156 redefined
+156: 10046040          @!"FreeImage!FreeImage_ConvertTo8Bits"
+breakpoint 157 redefined
+157: 10046440          @!"FreeImage!FreeImage_ConvertToGreyscale"
+breakpoint 158 redefined
+158: 100466c0          @!"FreeImage!FreeImage_ConvertToFloat"
+breakpoint 159 redefined
+159: 10046d30          @!"FreeImage!FreeImage_ConvertToRGB16"
+breakpoint 160 redefined
+160: 10046f90          @!"FreeImage!FreeImage_ConvertToRGBF"
+breakpoint 161 redefined
+161: 100475c0          @!"FreeImage!FreeImage_ConvertToStandardType"
+breakpoint 162 redefined
+162: 100476b0          @!"FreeImage!FreeImage_ConvertToType"
+breakpoint 163 redefined
+163: 1004a060          @!"FreeImage!FreeImage_ConvertToUINT16"
+breakpoint 164 redefined
+164: 1004aef0          @!"FreeImage!FreeImage_Dither"
+breakpoint 165 redefined
+165: 1004b080          @!"FreeImage!FreeImage_Threshold"
+breakpoint 166 redefined
+166: 1004ca70          @!"FreeImage!FreeImage_TmoDrago03"
+breakpoint 167 redefined
+167: 1004e180          @!"FreeImage!FreeImage_TmoFattal02"
+breakpoint 168 redefined
+168: 1004eb10          @!"FreeImage!FreeImage_TmoReinhard05Ex"
+breakpoint 169 redefined
+169: 1004ebc0          @!"FreeImage!FreeImage_TmoReinhard05"
+breakpoint 170 redefined
+170: 1004ec10          @!"FreeImage!FreeImage_ToneMapping"
+breakpoint 171 redefined
+171: 10050f90          @!"FreeImage!FreeImage_RotateClassic"
+breakpoint 172 redefined
+172: 100541d0          @!"FreeImage!FreeImage_OpenMultiBitmap"
+breakpoint 173 redefined
+173: 10054690          @!"FreeImage!FreeImage_OpenMultiBitmapFromHandle"
+breakpoint 174 redefined
+174: 10054850          @!"FreeImage!FreeImage_SaveMultiBitmapToHandle"
+breakpoint 175 redefined
+175: 10054a70          @!"FreeImage!FreeImage_CloseMultiBitmap"
+breakpoint 176 redefined
+176: 10054de0          @!"FreeImage!FreeImage_GetPageCount"
+breakpoint 177 redefined
+177: 10054f10          @!"FreeImage!FreeImage_AppendPage"
+breakpoint 178 redefined
+178: 10054f60          @!"FreeImage!FreeImage_InsertPage"
+breakpoint 179 redefined
+179: 10054ff0          @!"FreeImage!FreeImage_DeletePage"
+breakpoint 180 redefined
+180: 10055080          @!"FreeImage!FreeImage_LockPage"
+breakpoint 181 redefined
+181: 100550d0          @!"FreeImage!FreeImage_UnlockPage"
+breakpoint 182 redefined
+182: 100550e0          @!"FreeImage!FreeImage_MovePage"
+breakpoint 183 redefined
+183: 10055190          @!"FreeImage!FreeImage_GetLockedPageNumbers"
+breakpoint 184 redefined
+184: 10055210          @!"FreeImage!FreeImage_LoadMultiBitmapFromMemory"
+breakpoint 185 redefined
+185: 10055380          @!"FreeImage!FreeImage_SaveMultiBitmapToMemory"
+breakpoint 186 redefined
+186: 100562c0          @!"FreeImage!FreeImage_ZLibCompress"
+breakpoint 187 redefined
+187: 10056320          @!"FreeImage!FreeImage_ZLibUncompress"
+breakpoint 188 redefined
+188: 10056380          @!"FreeImage!FreeImage_ZLibGZip"
+breakpoint 189 redefined
+189: 10056550          @!"FreeImage!FreeImage_ZLibGUnzip"
+breakpoint 190 redefined
+190: 10056620          @!"FreeImage!FreeImage_ZLibCRC32"
+breakpoint 191 redefined
+191: 1005c340          @!"FreeImage!FreeImage_CreateTag"
+breakpoint 192 redefined
+192: 1005c380          @!"FreeImage!FreeImage_DeleteTag"
+breakpoint 193 redefined
+193: 1005c3c0          @!"FreeImage!FreeImage_CloneTag"
+breakpoint 194 redefined
+194: 1005c580          @!"FreeImage!FreeImage_GetTagKey"
+breakpoint 195 redefined
+195: 1005c5a0          @!"FreeImage!FreeImage_GetTagDescription"
+breakpoint 196 redefined
+196: 1005c5c0          @!"FreeImage!FreeImage_GetTagID"
+breakpoint 197 redefined
+197: 1005c5e0          @!"FreeImage!FreeImage_GetTagType"
+breakpoint 198 redefined
+198: 1005c600          @!"FreeImage!FreeImage_GetTagCount"
+breakpoint 199 redefined
+199: 1005c620          @!"FreeImage!FreeImage_GetTagLength"
+breakpoint 200 redefined
+200: 1005c640          @!"FreeImage!FreeImage_GetTagValue"
+breakpoint 201 redefined
+201: 1005c660          @!"FreeImage!FreeImage_SetTagKey"
+breakpoint 202 redefined
+202: 1005c6c0          @!"FreeImage!FreeImage_SetTagDescription"
+breakpoint 203 redefined
+203: 1005c730          @!"FreeImage!FreeImage_SetTagID"
+breakpoint 204 redefined
+204: 1005c750          @!"FreeImage!FreeImage_SetTagType"
+breakpoint 205 redefined
+205: 1005c770          @!"FreeImage!FreeImage_SetTagCount"
+breakpoint 206 redefined
+206: 1005c790          @!"FreeImage!FreeImage_SetTagLength"
+breakpoint 207 redefined
+207: 1005c7b0          @!"FreeImage!FreeImage_SetTagValue"
+breakpoint 208 redefined
+208: 1005f550          @!"FreeImage!FreeImage_TagToString"
+breakpoint 209 redefined
+209: 10062690          @!"FreeImage!FreeImage_FillBackground"
+breakpoint 210 redefined
+210: 10062770          @!"FreeImage!FreeImage_AllocateExT"
+breakpoint 211 redefined
+211: 10062ba0          @!"FreeImage!FreeImage_AllocateEx"
+breakpoint 212 redefined
+212: 10062bd0          @!"FreeImage!FreeImage_EnlargeCanvas"
+breakpoint 213 redefined
+213: 100645f0          @!"FreeImage!FreeImage_RotateEx"
+breakpoint 214 redefined
+214: 10064880          @!"FreeImage!FreeImage_GetChannel"
+breakpoint 215 redefined
+215: 10064c80          @!"FreeImage!FreeImage_SetChannel"
+breakpoint 216 redefined
+216: 10065070          @!"FreeImage!FreeImage_GetComplexChannel"
+breakpoint 217 redefined
+217: 100653a0          @!"FreeImage!FreeImage_SetComplexChannel"
+breakpoint 218 redefined
+218: 100666e0          @!"FreeImage!FreeImage_Rotate"
+breakpoint 219 redefined
+219: 10067c30          @!"FreeImage!FreeImage_Invert"
+breakpoint 220 redefined
+220: 10067eb0          @!"FreeImage!FreeImage_AdjustCurve"
+breakpoint 221 redefined
+221: 10068280          @!"FreeImage!FreeImage_AdjustGamma"
+breakpoint 222 redefined
+222: 10068390          @!"FreeImage!FreeImage_AdjustBrightness"
+breakpoint 223 redefined
+223: 10068490          @!"FreeImage!FreeImage_AdjustContrast"
+breakpoint 224 redefined
+224: 10068590          @!"FreeImage!FreeImage_GetHistogram"
+breakpoint 225 redefined
+225: 100687e0          @!"FreeImage!FreeImage_GetAdjustColorsLookupTable"
+breakpoint 226 redefined
+226: 10068ad0          @!"FreeImage!FreeImage_AdjustColors"
+breakpoint 227 redefined
+227: 10068b60          @!"FreeImage!FreeImage_ApplyColorMapping"
+breakpoint 228 redefined
+228: 10069120          @!"FreeImage!FreeImage_SwapColors"
+breakpoint 229 redefined
+229: 10069140          @!"FreeImage!FreeImage_ApplyPaletteIndexMapping"
+breakpoint 230 redefined
+230: 100693f0          @!"FreeImage!FreeImage_SwapPaletteIndices"
+breakpoint 231 redefined
+231: 1006a2b0          @!"FreeImage!FreeImage_Copy"
+breakpoint 232 redefined
+232: 1006a630          @!"FreeImage!FreeImage_Paste"
+breakpoint 233 redefined
+233: 1006a8e0          @!"FreeImage!FreeImage_CreateView"
+breakpoint 234 redefined
+234: 1006aab0          @!"FreeImage!FreeImage_Composite"
+breakpoint 235 redefined
+235: 1006ae30          @!"FreeImage!FreeImage_PreMultiplyWithAlpha"
+breakpoint 236 redefined
+236: 1006af20          @!"FreeImage!FreeImage_FlipHorizontal"
+breakpoint 237 redefined
+237: 1006b1c0          @!"FreeImage!FreeImage_FlipVertical"
+breakpoint 238 redefined
+238: 1006b8f0          @!"FreeImage!FreeImage_JPEGTransformFromHandle"
+breakpoint 239 redefined
+239: 1006bb60          @!"FreeImage!FreeImage_JPEGTransform"
+breakpoint 240 redefined
+240: 1006bbd0          @!"FreeImage!FreeImage_JPEGCrop"
+breakpoint 241 redefined
+241: 1006bc50          @!"FreeImage!FreeImage_JPEGTransformU"
+breakpoint 242 redefined
+242: 1006bcc0          @!"FreeImage!FreeImage_JPEGCropU"
+breakpoint 243 redefined
+243: 1006bd40          @!"FreeImage!FreeImage_JPEGTransformCombined"
+breakpoint 244 redefined
+244: 1006bdb0          @!"FreeImage!FreeImage_JPEGTransformCombinedU"
+breakpoint 245 redefined
+245: 1006be80          @!"FreeImage!FreeImage_JPEGTransformCombinedFromMemory"
+breakpoint 246 redefined
+246: 1006cfc0          @!"FreeImage!FreeImage_MultigridPoissonSolver"
+breakpoint 247 redefined
+247: 1006d0b0          @!"FreeImage!FreeImage_RescaleRect"
+breakpoint 248 redefined
+248: 1006d270          @!"FreeImage!FreeImage_Rescale"
+breakpoint 249 redefined
+249: 1006d2a0          @!"FreeImage!FreeImage_MakeThumbnail"
