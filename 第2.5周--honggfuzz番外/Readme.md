@@ -1,4 +1,4 @@
-#honggfuzz基础和Full-speed Fuzzing
+# honggfuzz基础和Full-speed Fuzzing
 
 这篇文章主要记录了结合projectzero的Fuzzing ImageIO来学习Full-speed Fuzzing
 
