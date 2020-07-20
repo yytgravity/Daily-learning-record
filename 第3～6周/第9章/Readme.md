@@ -46,7 +46,7 @@ struct task_struct {
    - 调度器schedule。
    - 任务切换函数switch_to。
 
-####### 时钟中断
+###### 时钟中断
 
 ```
 /* 通用的中断处理函数,一般用在异常出现时的处理 */
@@ -96,7 +96,7 @@ static void intr_timer_handler(void) {
 
 ```
 
-###### 调度器schedule
+###### 调度器schedule 
 
 ```
 /* 实现任务调度 */
