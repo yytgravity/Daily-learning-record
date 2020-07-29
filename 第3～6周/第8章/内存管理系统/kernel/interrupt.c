@@ -20,7 +20,7 @@ struct gate_desc{
     uint8_t  dcount;
     uint8_t  attribute;
     uint16_t func_offset_high_word;
-}
+};
 
 static void make_idt_desc(struct gate_desc* p_gdesc, uint8_t attr,intr_handler function);
 static struct gate_desc idt[IDT_DESC_CNT];
