@@ -51,7 +51,7 @@ static void* vadder_get(enum pool_flags pf, uint32_t pg_cnt){
 }
 
 uint32_t * pte_ptr(uint32_t vaddr){
-    uint32_t* pte = (uint32_t)(0xffc00000 + ((vadder & 0xffc00000) >> 10) + PTE_IDX(vaddr) * 4);
+    uint32_t* pte = (uint32_t)(0xffc00000 + ((vaddr & 0xffc00000) >> 10) + PTE_IDX(vaddr) * 4);
     return pte;
 }
 
