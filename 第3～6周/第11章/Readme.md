@@ -66,3 +66,60 @@ jmp 指令以非嵌套的方式调用新任务，新任务和旧任务之间不�
 ![](./img/4.png)
 
 ![](./img/3.png)
+
+
+#### 写代码时遇到的疑惑和答案
+
+###### pcb的栈布局问题
+
+我们从线程创建部分看起：
+```
+// 初始化线程基本信息
+void init_thread(struct task_struct* pthread, char* name, int prio) {
+   
+    .............
+   
+   
+// self_kstack是线程自己在内核态下使用的栈顶地址
+   pthread->self_kstack = (uint32_t*)((uint32_t)pthread + PG_SIZE);
+   
+    .............
+    
+}
+```
+在init_thread函数中将线程要使用的栈基址初始化为pcb的顶端
+```
+// 初始化线程栈thread_stack,将待执行的函数和参数放到thread_stack中相应的位置
+void thread_create(struct task_struct* pthread, thread_func function, void* func_arg) {
+   // 先预留中断使用栈的空间,可见thread.h中定义的结构
+   pthread->self_kstack -= sizeof(struct intr_stack);
+
+   // 再留出线程栈空间,可见thread.h中定义
+   pthread->self_kstack -= sizeof(struct thread_stack);
+  
+   struct thread_stack* kthread_stack = (struct thread_stack*)pthread->self_kstack;
+   kthread_stack->eip = kernel_thread;
+   kthread_stack->function = function;
+   kthread_stack->func_arg = func_arg;
+   kthread_stack->ebp = kthread_stack->ebx = kthread_stack->esi = kthread_stack->edi = 0;
+}
+```
+在thread_create函数中完成了intr_stack和thread_stack的布局，下图是经过两次-操作的栈布局：
+![](./img/5.png)
+再-操作之后，我们把线程的上下文保存在了 struct thread_stack栈中，注意此时的self_kstack依然是指向了两次-之后的位置。
+
+所以我们在构建用户上下文的时候，想要引入thread_stack就需要用一个+，来使self_kstack指针跨过struct thread_stack栈，如下图：
+![](./img/6.png)
+
+###### c程序的内存布局问题
+
+- 用户程序内存空间的最顶端用来存储命令行参数及环境变量，这些内容是由某操作系统下的 C 运行库写进去的，将来实现从文件系统加载用户进程并为其传递参数时会介绍这部分。
+
+- 紧接着是栈空间和堆空间，栈向下扩展，堆向上扩展，栈与堆在空间上是相接的，这两个空间由操作系统管理分配，由于栈与堆是相向扩展的，操作系统需要检测栈与堆的碰撞。
+- 最下面的 未初始化数据段 bss、初始化数据段 data 及代码段 text 由链接器和编译器负责。
+- 在 4GB 的虚拟地址空间中，(0xc0000000-1)是用户空间的最高地址，0xc0000000~0xffffffff 是内核空间。
+ 
+ ![](./img/7.png)
+ 
+ - 我们也效仿这种内存结构布局，把用户空间的最高处即 0xc0000000-1，及以下的部分内存空间用于存储用户进程的命令行参数，之下的空间再作为用户的栈和堆。命令行参数也是被压入用户栈的(在后面章节介绍加载 用户进程时会了解)，因此虽然命令行参数位于用户空间的最高处，但它们相当于位于栈的最高地址处，所以用户栈的栈底地址为0xc0000000。 由于在申请内存时，内存管理模块返回的地址是内存空间的下边界，所以 我们为栈申请的地址应该是(0xc0000000-0x1000)，此地址是用户栈空间 栈顶的下边界。这里我们用宏来定义此地址，即 USER_STACK3_VADDR，它定义在 userprog.h 中。
+
