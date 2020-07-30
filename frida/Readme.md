@@ -327,6 +327,156 @@ async function name([param[, param[, ... param]]]) { statements }
     - frida 内置与 I/O 相关的接口 Socket, SocketListener, IOStream 及其子类均使⽤ Promise 的接口。结合 Stream 可实现⼤文件传输等异步任务
 
     
+
+## win frida 初试
+
+https://codeengn.com/challenges/  上的basic rce l03
+
+这是个很简单的入门 creak me，输入密码，比较正确的话就可破解，我们主要用它来练习一下frida的使用
+
+我们拿ida打开，可以看到他加载了MSVBVM50.dll,谷歌一下可以知道他是一个Visual Basic的程序。
+![](./img/8.png)
+逻辑很简单，随便逆向一下就可以找到关键比较。
+![](./img/9.png)
+可以看到__vbaStrCmp函数有两个参数，第一个为我们的输入，第二个是正确的答案，我们知道比较函数比较成功时rax保存的返回值为0，所以我们只要用frida hook比较函数将其返回值修改为0即可成功。
+
+```
+from __future__ import print_function
+import frida
+import sys
+
+def on_message(message,data):
+	print("[%s] => %s" % (message,data))
+	
+def main(target_process):
+	session = frida.attach(target_process)
+	script = session.create_script(""" 
+	var baseAddr = Module.findBaseAddress('MSVBVM50.dll');
+	console.log('MSVBVM50.dll baseAddr : ' + baseAddr);
+	
+	"use strict";
+	const __vbaStrCmp = Module.findExportByName("MSVBVM50.dll","__vbaStrCmp");
+	Interceptor.attach(__vbaStrCmp,{
+		onEnter: function (args){
+			console.log('*****************************************************');
+			console.log('[+] Called	__vbaStrCmp !! [' + __vbaStrCmp + ']');
+			console.log('[+] args[0] = [' + args[0] + '] ')
+			dumpAddr('args[0]' , args[0], 0x16);
+			console.log('[+] args[1] = [' + args[1] + ']');
+			dumpAddr('args[1]', args[1], 0x16);
+		},
+		
+		onLeave: function (args){
+			console.log('*****************************************************');
+			this.context.eax = 0x0;
+			console.log('Context information:');
+			console.log('Context  : ' + JSON.stringify(this.context));	
+			console.log('*****************************************************');
+		}
+	});
+	
+	function dumpAddr(info, addr, size){
+		if (addr.isNull())
+			return;
+		console.log('Data dump' + info + ':');
+		var buf = Memory.readByteArray(addr, size);
+		console.log(hexdump(buf, { offset: 0, length: size, header: true, ansi: false}));
+		}
+		
+	function resolveAddress(addr){
+		  var idaBase = ptr('0x400000');
+		  var offest = ptr(addr).sub(idaBase);
+		  var result = baseAddr.add(offest);
+		  console.log('[+] New addr = ' + result);
+		  return result;
+		}
+	
+	""")
+	
+	script.on('message', on_message)
+	script.load()
+	print("[!] Ctrl+D on UNIX, Ctrl+Z on Windows/cmd.exe to detach from instrumented program.\n\n")
+	sys.stdin.read()
+	session.detach()
+
+if __name__ == '__main__':
+	if len(sys.argv) != 2:
+		print("This script needs pid or proc name :")
+		sys.exit(1)
+	try:
+		target_process = int(sys.argv[1])
+	except ValueError:
+		target_process = sys.argv[1]
+	main(target_process)
+```
+![](./img/10.png)
+
+简单记录几个关键点：
+
+```
+const __vbaStrCmp = Module.findExportByName("MSVBVM50.dll","__vbaStrCmp");
+    Interceptor.attach(__vbaStrCmp,{
+        onEnter: function (args){
+            console.log('*****************************************************');
+            console.log('[+] Called __vbaStrCmp !! [' + __vbaStrCmp + ']');
+            console.log('[+] args[0] = [' + args[0] + '] ')
+            dumpAddr('args[0]' , args[0], 0x16);
+            console.log('[+] args[1] = [' + args[1] + ']');
+            dumpAddr('args[1]', args[1], 0x16);
+        },
+```
+在__vbaStrCmp函数处进行调用拦截，设置了被拦截之前的回调函数，将该函数的两个参数输出出来，因为他的这两个函数为指针，所以我们定义了一个dumpAddr函数来输出指针内容。
+
+```
+	function dumpAddr(info, addr, size){
+		if (addr.isNull())
+			return;
+		console.log('Data dump' + info + ':');
+		var buf = Memory.readByteArray(addr, size);
+		console.log(hexdump(buf, { offset: 0, length: size, header: true, ansi: false}));
+		}
+```
+
+接下来是被拦截之后的回调：
+```
+onLeave: function (args){
+			console.log('*****************************************************');
+			this.context.eax = 0x0;
+			console.log('Context information:');
+			console.log('Context  : ' + JSON.stringify(this.context));	
+			console.log('*****************************************************');
+		}
+	});
+```
+
+这里补充一下Interceptor.attach(target, callbacks)提供的this对象，它有一些比较有用的属性：
+- returnAddress: 返回NativePointer类型的 address 对象
+
+- context: 包含 pc，sp，以及相关寄存器比如 eax, ebx等，可以在回调函数中直接修改
+- errno: （UNIX）当前线程的错误值
+- lastError: (Windows) 当前线程的错误值
+- threadId: 操作系统线程Id
+- depth: 函数调用层次深度
+
+我们这里就利用了context属性，将它的eax修改为0，从而绕过比较。
+
+下面提供了另一种获取函数地址的方法
+```
+    var baseAddr = Module.findBaseAddress('MSVBVM50.dll');
+    
+    function resolveAddress(addr){
+          var idaBase = ptr('0x400000');
+          var offest = ptr(addr).sub(idaBase);
+          var result = baseAddr.add(offest);
+          console.log('[+] New addr = ' + result);
+          return result;
+        }
+```
+这是将通过ida找到的函数地址作为参数，通过减去ida基址计算出偏移，之后再和dll的加载地址相加得到实际的函数地址。
+
+我们上面用到的方法是利用findExportByName（“ dll name”，“ function name”）找到函数地址。
+
+
 ## frida hook fuzz尝试
 
 ##### 我们先从简单的小目标练起
@@ -456,3 +606,136 @@ sys.stdin.read()
 
 - 在实际的hook中，我们可以通过Process.enumerateModulesSync()和Module.enumerateSymbols("<module>")获取目标函数的地址，也可以Module.findExportByName(module | null, exp)或者是获取偏移地址Module.findBaseAddress(module)+偏移。（https://blog.csdn.net/friendan/article/details/105048853）
 
+##### fizzer
+
+- 它是一个基于Frida仪器框架的覆盖率指导的黑匣子模糊器（https://github.com/demantz/frizzer）
+
+简单记录一下它的用法（以他提供的测试用例来记录一下）
+
+```
+#include<sys/socket.h> 
+#include<netinet/in.h> 
+#include<stdio.h> 
+#include<string.h>
+#include<stdlib.h> 
+#include <arpa/inet.h>
+#include <unistd.h>
+
+
+void crash() {
+    char a[10];
+    strcpy(a, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    return;
+}
+
+void handleClient(char* buf) {
+    if(buf[0]%5 == 1) {
+        puts("--A--");
+        if(buf[1]%6 == 1) {
+            puts("--AB--");
+            if(buf[2]%7 == 1) {
+                puts("--ABC--");
+                if(buf[3]%8 == 1) {
+                    puts("--ABCD--");
+                    if(buf[4]%9 == 1) {
+                        puts("--ABCDE--");
+                        if(buf[5]%10 == 1) {
+                            puts("--ABCDEF--");
+                            if(buf[6]%11 == 1) {
+                                puts("--CRASH--");
+                                crash();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    printf("%s",buf); 
+}
+
+int main(int argc, char** argv) {
+    char buf[100]; 
+    socklen_t len; 
+    int sock_desc,temp_sock_desc; 
+    struct sockaddr_in client,server; 
+    memset(&client,0,sizeof(client)); 
+    memset(&server,0,sizeof(server)); 
+    sock_desc = socket(AF_INET,SOCK_STREAM,0); 
+    server.sin_family = AF_INET; server.sin_addr.s_addr = inet_addr("127.0.0.1"); 
+    server.sin_port = htons(7777); 
+    bind(sock_desc,(struct sockaddr*)&server,sizeof(server)); 
+    listen(sock_desc,20); len = sizeof(client);
+    while(1)
+    {
+        temp_sock_desc = -1;
+        memset(buf, 0, 100);
+        temp_sock_desc = accept(sock_desc,(struct sockaddr*)&client,&len);
+        recv(temp_sock_desc,buf,100,0);
+        handleClient(buf);
+        close(temp_sock_desc); 
+    }
+    close(sock_desc); 
+    return 0; 
+
+}
+```
+
+这是一个简单的服务器应用程序，可以通过TCP接受用户输入。
+
+makefile：
+
+```  
+all:
+	gcc -no-pie -o test test.c -Wstringop-overflow=0
+
+clean:
+	rm test
+	rm -rf ./tmprojdir
+```
+
+启动fuzz的脚本：
+
+```
+#!/bin/bash
+
+# Expected bahavior:
+# Find new paths at seeds: 5, 111, 135, ...
+# Find crash at seed 17??
+# Average Speed: between 40 and 50
+
+#make
+#./test > /dev/null &
+
+rm -rf tmpprojdir
+
+# old:
+# frizzer --project tmpprojdir --indir indir -f 0x401256 -t 7777 -p test -m /home/dennis/tools/frida-fuzzer/tests/simple_binary/test
+
+# new:
+frizzer init tmpprojdir
+cat > tmpprojdir/config <<EOF
+[fuzzer]
+log_level       = 3 # debug
+debug_mode      = false
+[target]
+process_name    = "test"
+function        = 0x401256
+host            = "localhost"
+port            = 7777
+remote_frida    = false
+fuzz_in_process = false
+modules = [
+        "/home/dennis/tools/frida-fuzzer/tests/simple_binary/test",
+    ]
+EOF
+
+frizzer add -p tmpprojdir indir
+frizzer fuzz -p tmpprojdir
+```
+
+可以看到fizzer需要handleClient（也就是被测试函数的地址），调试找到他的地址。
+
+注意：默认的fizzer会改变目标函数的第一个参数（这里是char *），如果有其他想fuzz的内容，可能需要自己修改fizzer。
+
+该目录indir将填充包含语料库数据的文件。这些数据是进行所有模糊测试的基础。
