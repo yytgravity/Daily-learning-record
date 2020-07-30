@@ -326,8 +326,43 @@ async function name([param[, param[, ... param]]]) { statements }
     - rpc.exports 接⼝支持 Promise，可实现等待回调函数返回。示例代码:可以参考上面的那个例子。
     - frida 内置与 I/O 相关的接口 Socket, SocketListener, IOStream 及其子类均使⽤ Promise 的接口。结合 Stream 可实现⼤文件传输等异步任务
 
-    
 
+### 与本地代码交互
+
+###### 指针和内存管理
+
+- NativePointer:表示 C 中的指针，可指向任意(包括⾮非法)地址
+
+- frida 数据指针、函数指针、代码⻚页地址、基地址等均依赖 NativePointer 接⼝口
+- 提供 add, sub, and, or, xor 和算术左右移运算。详⻅见⽂文档(上面有中文链接)
+- 可⽤Memory.alloc /.allocUtf8String / .allocAnsiString / .allocUtf16String 分配
+- Memory.alloc* 分配的内存，在变量量作⽤用域之外会被释放
+
+```
+function alloc() {
+    return Memory.alloc(8);
+}
+const p = alloc(); // dangling pointer
+```
+- frida内存管理和libc的对比：
+![](./img/11.png)
+
+###### 内存读写
+
+- Memory.write* 和 Memory.read* 系列列函数，类型包括 S8, U8, S16,U16, S32, U32, Short, UShort, Int, UInt, Float, Double其中 Memory.{read,write}{S64,U64,Long,ULong} 由于 Javascript 引擎默认对数字精度有限制(不支持 64 位⼤整数)，需要使⽤frida 的 Int64 或 UInt64 ⼤整数类。（详见文档）
+
+- 字符串函数
+    - 分配 Memory.alloc{Ansi,Utf8,Utf16}String
+    
+    - 读取 Memory.read{C,Utf8,Utf16,Ansi}String(注意 CString 只提供了 read)
+    - 覆写 Memory.write{Ansi,Utf8,Utf16}String
+    - 读写一块连续内存:Memory.{read,write}ByteArray
+
+![](./img/12.png)
+![](./img/13.png)
+
+
+    
 ## win frida 初试
 
 https://codeengn.com/challenges/  上的basic rce l03
@@ -530,8 +565,8 @@ Module.enumerateSymbolsSync("test").forEach(function(symbol){
             case "pwn":
                 pwnAddr = symbol.address;
                 // use the function prototype to create a handle
-                lolHandle = new NativeFunction(ptr(pwnAddr), "void", ["pointer"]);
-                console.log("[i] lol() is at " + pwnAddr);
+                pwnHandle = new NativeFunction(ptr(pwnAddr), "void", ["pointer"]);
+                console.log("[i] pwn() is at " + pwnAddr);
         }
     });
 
@@ -606,7 +641,94 @@ sys.stdin.read()
 
 - 在实际的hook中，我们可以通过Process.enumerateModulesSync()和Module.enumerateSymbols("<module>")获取目标函数的地址，也可以Module.findExportByName(module | null, exp)或者是获取偏移地址Module.findBaseAddress(module)+偏移。（https://blog.csdn.net/friendan/article/details/105048853）
 
-##### fizzer
+###### NativeFunction
+
+- new NativeFunction(address, returnType, argTypes[abi]): 在address（使用NativePointer的格式）地址上创建一个NativeFunction对象来进行函数调用，returnType 指定函数返回类型，argTypes 指定函数的参数类型，如果不是系统默认类型，也可以选择性的指定 abi 参数，对于可变类型的函数，在固定参数之后使用 “…” 来表示。
+
+- 类和结构体
+    - 在函数调用的过程中，类和结构体是按值传递的，传递的方式是使用一个数组来分别指定类和结构体的各个字段，理论上为了和需要的数组对应起来，这个数组是可以支持无限嵌套的，结构体和类构造完成之后，使用NativePointer的形式返回的，因此也可以传递给Interceptor.attach() 调用。
+    - 需要注意的点是， 传递的数组一定要和需要的参数结构体严格吻合，比如一个函数的参数是一个3个整形的结构体，那参数传递的时候一定要是 [‘int’, ‘int’, ‘int’]，对于一个拥有虚函数的类来说，调用的时候，第一个参数一定是虚表指针。
+    - Supported Types
+        - void
+        - pointer
+        - int
+        - uint
+        - long
+        - ulong
+        - char
+        - uchar
+        - float
+        - double
+        - int8
+        - uint8
+        - int16
+        - uint16
+        - int32
+        - uint32
+        - int64
+        - uint64
+    - Supported ABIs
+        - default
+    - Windows 32-bit: 
+        - sysv
+        - stdcall
+        - thiscall
+        - fastcall
+        - mscdecl
+    - Windows 64-bit: 
+        - win64
+    - UNIX x86: 
+        - sysv
+        - unix64
+    - UNIX ARM: 
+        - sysv
+        - vfp
+
+###### 思路小结
+
+```
+Module.enumerateSymbolsSync("test").forEach(function(symbol){
+        switch (symbol.name) {
+            case "pwn":
+                pwnAddr = symbol.address;
+                // use the function prototype to create a handle
+                pwnHandle = new NativeFunction(ptr(pwnAddr), "void", ["pointer"]);
+                console.log("[i] pwn() is at " + pwnAddr);
+        }
+    });
+
+if (pwnAddr == null) {
+    die("Error finding symbol");
+}
+
+// Fuzz the function in-process
+Interceptor.attach(ptr(pwnAddr), {
+    // Begin fuzzing as soon as the application calls the function itself
+    onEnter: function(args) {
+        console.log("[i] Original argument: " + args[0].readCString());
+
+        console.log("[*] Fuzzing now");
+        while(fuzzData.length < size) {
+            fuzzData.push(0x41);
+            Memory.writeByteArray(arg, fuzzData);
+            try {
+                pwnHandle(arg);
+            }
+            catch(e) {
+                console.log("[!] Crash found for size " + fuzzData.length);
+                break;
+            }
+        }
+    },
+});
+"""
+
+```
+
+我们首先遍历模块找到目标函数地址，然后通过new NativeFunction()注册一个Handle，在Interceptor.attach函数拦截之前，设置一个回调函数，让他不断的调用我们注册的Handle，在此期间不断的改变参数，来达到fuzz的目的。等到crash的时候输出长度。
+
+
+### fizzer
 
 - 它是一个基于Frida仪器框架的覆盖率指导的黑匣子模糊器（https://github.com/demantz/frizzer）
 
