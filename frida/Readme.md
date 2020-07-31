@@ -361,6 +361,189 @@ const p = alloc(); // dangling pointer
 ![](./img/12.png)
 ![](./img/13.png)
 
+###### 分析模块和内存页
+
+- process对象
+    - 进程基本信息：
+        - Process.arch: CPU架构信息，取值范围：ia32、x64、arm、arm64
+        
+        - Process.platform: 平台信息，取值范围：windows、darwin、linux、qnx
+        - Process.pageSize: 虚拟内存页面大小，主要用来辅助增加脚本可移植性
+        - Process.pointerSize: 指针占用的内存大小，主要用来辅助增加脚本可移植性
+        - Process.codeSigningPolicy: 取值范围是 optional 或者 required，后者表示Frida会尽力避免修改内存中的代码，并且不会执行未签名的代码。默认值是 optional，除非是在 Gadget 模式下通过配置文件来使用 required，通过这个属性可以确定 Interceptor API 是否有限制，确定代码修改或者执行未签名代码是否安全。
+        - Process.isDebuggerAttached(): 确定当前是否有调试器附加
+        - Process.getCurrentThreadId(): 获取当前线程ID
+    - 枚举模块、线程、内存页：
+        - Process.enumerateThreads(callbacks): 枚举所有线程，每次枚举到一个线程就执行回调类callbacks： 
+            - onMatch: function(thread): 当枚举到一个线程的时候，就调用这个函数，其中thread参数包含 ： 
+                - id，线程ID
+               
+                - state，线程状态，取值范围是 running, stopped, waiting, uninterruptible, halted
+                - context, 包含 pc, sp，分别代表 EIP/RIP/PC 和 ESP/RSP/SP，分别对应于 ia32/x64/arm平台，其他的寄存器也都有，比如 eax, rax, r0, x0 等。
+                - 函数可以直接返回 stop 来停止枚举。
+            - onComplete: function(): 当所有的线程枚举都完成的时候调用。
+        
+        - Process.enumerateModules(callbacks): 枚举已经加载的模块，枚举到模块之后调用回调对象： 
+            - onMatch: function(module): 枚举到一个模块的时候调用，module对象包含如下字段： 
+                - name, 模块名
+                
+                - base, 基地址
+                - size，模块大小
+                - path，模块路径
+                - 函数可以返回 stop 来停止枚举 。
+            - onComplete: function(): 当所有的模块枚举完成的时候调用。
+
+        - Process.eumerateRanges(protection | specifier, callbacks): 枚举指定 protection 类型的内存块，以指定形式的字符串给出：rwx，而 rw- 表示最少是可读可写，也可以用分类符，里面包含 protection 这个Key，取值就是前面提到的rwx，还有一个 coalesce 这个Key，表示是否要把位置相邻并且属性相同的内存块合并给出结果，枚举过程中回调 callbacks 对象： 
+            - onMatch: function(range): 每次枚举到一个内存块都回调回来，其中Range对象包含如下属性： 
+                - base：基地址
+                
+                - size：内存块大小
+                - protection：保护属性
+                - file：（如果有的话）内存映射文件： 
+                    - path，文件路径 
+                    - offset，文件内偏移
+                - 如果要停止枚举过程，直接返回 stop 即可
+            
+            - onComplete: function(): 所有内存块枚举完成之后会回调
+    
+    - 查找模块：
+        - Process.findModuleByAddress(address),Process.getModuleByAddress(address), Process.findModuleByName(name),Process.getModuleByName(name): 根据地址或者名称来查找模块，如果找不到这样的模块，find开头的函数返回 null，get开头的函数会抛出异常。
+    
+    - 查找内存页
+        - Process.findRangeByAddress(address),Process.getRangeByAddress(address): 返回一个内存块对象， 如果在这个address找不到内存块对象，那么 findRangeByAddress() 返回 null 而 getRangeByAddress 则抛出异常。
+
+- Module对象：    
+    - frida内置了导入导出表的解析
+        - Module.emuerateImports(name, callbacks): 枚举模块 name 的导入表，枚举到一个导入项的时候回调callbacks, callbacks包含下面2个回调： 
+            - onMatch: function(imp): 枚举到一个导入项到时候会被调用，imp包含如下的字段： 
+                - type，导入项的类型， 取值范围是 function或者variable
+                
+                - name，导入项的名称 
+                - module，模块名称
+                - address，导入项的绝对地址
+                - 以上所有的属性字段，只有 name 字段是一定会有，剩余的其他字段不能保证都有，底层会尽量保证每个字段都能给出数据，但是不能保证一定能拿到数据，onMatch函数可以返回字符串 stop 表示要停止枚举。
+            
+            - onComplete: function(): 当所有的导入表项都枚举完成的时候会回调
+        
+        - Module.emuerateExports =(name, callbacks): 枚举指定模块 name 的导出表项，结果用 callbacks 进行回调： 
+            - onMatch: function(exp): 其中 exp 代表枚举到的一个导出项，包含如下几个字段： 
+                - type，导出项类型，取值范围是 function或者variable
+                
+                - name，导出项名称
+                - address，导出项的绝对地址，NativePointer
+                - 函数返回stop 的时候表示停止枚举过程
+            
+            - onComplete: function(): 枚举完成回调 
+        
+        - Module.enumerateSymbols(name, callbacks): 枚举指定模块中包含的符号，枚举结果通过回调进行通知： 
+            - onMatch: function(sym): 其中 sym 包含下面几个字段： 
+                - isGlobal，布尔值，表示符号是否全局可见
+                
+                - type，符号的类型，取值是下面其中一种： 
+                    - unknown
+                    
+                    - undefined
+                    - absolute
+                    - section
+                    - prebound-undefined
+                    - indirect
+                
+                - section，如果这个字段不为空的话，那这个字段包含下面几个属性： 
+                    - id，小节序号，段名，节名
+                    
+                    - protection，保护属性类型， rwx这样的属性
+                
+                - name，符号名称
+                - address，符号的绝对地址，NativePointer
+                
+                - 这个函数返回 stop 的时候，表示要结束枚举过程
+            
+            - onComplete: function(): 枚举完成回调 
+        
+        - 确保模块初始化完成：
+            - Module.ensureInitialized
+            
+            - 例例:等待 Objective C 运⾏行行时初始化:Module.ensureInitialized(‘Foundation’)
+    
+    - enumerate*Sync
+        - frida 的 API 设计中存在⼤量具有 Sync 后缀的 api：
+            - 带 Sync 后缀:直接返回整个列列表
+            - 不带 Sync 后缀:传⼊一个 js 对象，其 onMatch 和 onComplete 属性分别对应迭代的每一个元素的回调，和结束时的回调函数。 与 IO 不不同的是这些回调函数都是同步执行的。onMatch 函数可以返回 ‘stop’ 字符串终⽌迭代。
+    
+    - 解析函数地址
+        - 导入/导出的符号：
+            - Module.findExportByName(module | null, exp): 返回模块module 内的导出项的绝对地址，如果模块名不确定，第一个参数传入null，这种情况下会增大查找开销，尽量不要使用。
+            - Module.enumerateExports(Sync) / enumerateImports(Sync)
+        - 内嵌调试符号(未strip)
+            - DebugSymbol.getFunctionByName(“”) 
+            - DebugSymbol.findFunctionsNamed()
+            - DebugSymbol.findFunctionsMatching()
+        
+        - ⽆符号:使⽤用模块基地址 + 偏移:
+            - Process.findModuleByName(‘Calculator’).base.add(0x3200)
+
+- ffi bridge
+    - NativeFunction：本地代码函数接口
+        - 由于缺少类型信息，需要指定函数指针、原型，包括参数列列表和返回值 类型，调⽤用约定(可选) new NativeFunction(address, returnType, argTypes[, abi])
+        - 简单提一下，下面的实战部分有详细的补充。
+    
+    - SystemFunction：类似NativeFunction，但返回地址，根据平台不同可访问errno（POSIX）或者lastError来获得错误信息。函数返回值在value属性。
+    ![](./img/14.png)
+    
+    - NativeCallback
+        - 返回一个NativePointer，指向一个包装好的javascript回调。本地代码执行到NativePointer的指针时将调用到Javascript。
+         ![](./img/15.png)
+    
+    - 参数和返回值： 
+        - 返回值和参数列列表⽀支持的类型:void, pointer, int, uint, long, ulong, char, uchar, float, double, int8, uint8, int16, uint16, int32, uint32, int64。
+        
+        - 不同的头⽂文件、编译环境可能有会 typedef 别名 结构体参数(注意不不是结构体指针)可使⽤用嵌套的 Array 表示。
+        - 可变参数可⽤用 ‘...’ 处理。
+    
+    - 可变参数
+      ![](./img/16.png)
+    
+    - 结构体参数
+        - C 语⾔言⽀支持直接将结构体作为参数传递，调⽤用时即使调⽤用约定为使⽤用寄存 器器传参，结构体也将整个由堆栈传递
+        ![](./img/17.png)
+     
+    - ABI
+        ![](./img/18.png)    
+
+- Interceptor对象（简单记录一下，后面实战有补充）：
+    - Interceptor 对指定函数指针设置 inline hook
+   
+    - Interceptor.attach:在进⼊入函数之前，函数返回后分别调⽤用 onEnter 和 onLeave 回调函数。可以对函数参数和返回值进⾏行行修 改，但原始函数⼀一定会被调⽤用
+    - Interceptor.replace:整个替换掉函数调⽤用。可以在 js callback ⾥里里继续调⽤用原始函数，也可以完全屏蔽掉
+    - 在 js 回调中可以访问 this 获得上下⽂文信息，如常⽤用寄存器器、thread id 等;此外 this 还可以在 onEnter 保存额外的参数传递给 onLeave
+    - args: 以下标函数参数，默认均为 NativePointer。可⽤用 toInt32 转换为整型
+    
+    ```
+    Interceptor.attach(Module.findExportByName("libc.so", "open"),{    
+        onEnter: function (args) {
+            console.log(Memory.readUtf8String(args[0]));
+            this.fd = args[1].toInt32(); },
+        onLeave: function (retval) {
+            if (retval.toInt32() == -1) {
+            /* do something with this.fd */
+            } }
+        });
+    ```
+    - retVal.replace 可整个替换掉返回值
+
+- 调用堆栈：
+    - 获取寄存器器上下⽂：
+        - 插桩回调中访问 this.context
+        - Process.enumerateThreadsSync() 枚举线程信息
+    
+    - Thread.backtrace 可根据上下⽂文回溯出调⽤用堆栈的地址
+    - DebugSymbol.fromAddress 进⼀一步对地址符号化
+    
+    ```
+    console.log('\tBacktrace:\n\t' + Thread.backtrace(this.context,Backtracer.ACCURATE).map(DebugSymbol.fromAddress).join('\n\t'));
+    ```
+        
+    
 
     
 ## win frida 初试
