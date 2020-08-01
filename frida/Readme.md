@@ -695,6 +695,206 @@ onLeave: function (args){
 我们上面用到的方法是利用findExportByName（“ dll name”，“ function name”）找到函数地址。
 
 
+## win frida --- Frida12.9.8后的windows新的传递符号字符串的方法
+
+- Frida12.9.8改进
+    - 总体而言，Frida使用deghelp.dll提供了在Windows平台中查找符号的符号，但是它成为了符号服务器的支持。于是我们增加了符号服务器支持，并改进了Windows中传递符号字符串的方法。在旧版本的Frida中，通过使用通配符模块查找符号的原因，查找每个符号都会花费一定的时间。而现在，您可以指定模块名称以快速符号查找的速度。
+    
+    - 新的Frida将结合symsrv.dll和dbghelp.dll对包括Microsoft符号服务器内部的符号服务器提供支持。
+
+- 设置符号路径
+    - 在Windows环境下设置符号服务器的方法有很多，可以从命令行设置_NT_SYMBOL_PATH变量。Windows调试器的符号路径对变量的用法有很好的描述。
+    
+    - 以下将使用“ c：符号”作为其本地符号存储来缓存正式的Microsoft符号服务器。
+    - setx _NT_SYMBOL_PATH SRV*c:symbols*https://msdl.microsoft.com/download/symbols
+    - 以下命令将使系统使用默认的符号存储目录。
+    - setx _NT_SYMBOL_PATH SRV*https://msdl.microsoft.com/download/symbols
+
+- 实战
+    - 由于原文作者并未提供恶意软件所以现在我们只能着重分析代码的原理：
+    - https://github.com/ohjeongwook/Frida.examples.vbe
+
+###### inject.py
+
+```
+    parser = argparse.ArgumentParser(description='run.py [-n <process name>] [-p <process id>] [<presets>, ...]')
+    parser.add_argument("-n", "--process_name", dest = "process_name", default = "", metavar = "PROCESS_NAME", help = "Set process name to start")
+    parser.add_argument('-p', dest = "process_id", default = 0, type = auto_int)
+    parser.add_argument('script_filenames', metavar='SCRIPT_FILENAMES', nargs='+', help = "Set script file names")
+    args = parser.parse_args()
+```
+    
+- 主要用到了python的argparse模块，可以参考这篇文章：https://blog.csdn.net/u014470361/article/details/100057884
+
+```
+    script_text = ''
+    for script_filename in args.script_filenames:
+        with open(script_filename, 'r') as fd:
+            script_text += fd.read() + '\n'
+
+    code_instrumenter = code.Instrumenter(script_text)
+
+    if args.process_name:
+        code_instrumenter.run(args.process_name)
+    else:
+        code_instrumenter.instrument(args.process_id)
+```
+这部分代码主要用到了code.py，我们结合他一起分析。
+
+###### code.py
+
+```
+class Instrumenter:
+    def __init__(self, script_text):
+        self.sessions = []
+        self.script_text = script_text
+        self._device = frida.get_local_device()
+        self._device.on("child-added", self._on_child_added)
+        self._device.on("child-removed", self._on_child_removed)
+        self._device.on("output", self._on_output)
+        
+        def __del__(self):
+        for session in self.sessions:
+            session.detach()
+
+    def run(self, process_name):
+        proc = process.Runner(process_name, suspended = True)
+        if not proc.create():
+            return
+        process_id = proc.get_id()
+
+        self.instrument(process_id)
+
+        if proc:
+            proc.resume()
+
+    def instrument(self, process_id):
+        session = frida.attach(process_id)
+        self.sessions.append(session)
+        session.enable_child_gating()
+        script = session.create_script(self.script_text)
+        script.on('message', self.on_message)
+        script.load()
+
+    def on_message(self, message, data):
+        print("[%s] => %s" % (message, data))
+
+    def _on_child_added(self, child):
+        print("⚡ new child: {}".format(child))
+        self.instrument(child.pid)
+
+    def _on_child_removed(self, child):
+        print("⚡ child terminated: {}".format(child))
+
+    def _on_output(self, pid, fd, data):
+        print("⚡ output: pid={}, fd={}, data={}".format(pid, fd, repr(data)))
+        
+```
+
+- 初始化部分很基础，我们主要说下面的部分。
+- 脚本会根据你使用的是pid还是进程名做出不同的应对，我们先说简单的，如果是pid，则会调用instrument()，这个就是常规的frida流程
+- 如果输入的是进程名，则会调用run()，这个还会涉及到process.py
+    
+    ```
+    class Runner:
+    def __init__(self, command_line, debug = 0, show = True, suspended = False):
+        self.command_line = command_line
+        self.error_code = 0
+
+        self.creation_flags = 0
+        if debug:
+            self.creation_flags |= DEBUG_PROCESS
+
+        if suspended:
+            self.creation_flags |= CREATE_SUSPENDED
+
+        self.startup_info = STARTUPINFO()
+        self.startup_info.cb = sizeof(self.startup_info)
+        if show:
+            self.startup_info.wShowWindow = 1
+        else:
+            self.startup_info.wShowWindow = 0
+        self.startup_info.dwFlags = 0x1
+       
+        self.process_info = PROCESS_INFORMATION()
+
+    def create(self):
+        print("Creating process: " + self.command_line)
+        if not kernel32.CreateProcessW(
+                0,
+                self.command_line,
+                0,
+                0,
+                0,
+                self.creation_flags,
+                0,
+                0,
+                byref(self.startup_info),
+                byref(self.process_info)):
+            self.error_code = kernel32.GetLastError()
+            print("[*] Error: 0x%08x." % (kernel32.GetLastError()))
+            return False
+        return True
+
+    def get_id(self):
+        return self.process_info.dwProcessId
+
+    def resume(self):
+        kernel32.ResumeThread(self.process_info.hThread)
+    ```
+    - 其中create()通过CreateProcessW创建了一个新的进程和它的主线程，这个新进程运行指定的可执行文件。
+    
+- 接下来就是最关键的js脚本部分了，我们来逐步分析：
+    - 首先是符号查询resolveName
+
+    ```
+     var loadedModules = {}
+     var resolvedAddresses = {}
+     function resolveName(dllName, name) {
+        var moduleName = dllName.split('.')[0]
+        var functionName = moduleName + "!" + name
+     if (functionName in resolvedAddresses) {
+        return resolvedAddresses[functionName]
+    }
+    
+    log("resolveName " + functionName);
+    log("Module.findExportByName " + dllName + " " + name);
+    var addr = Module.findExportByName(dllName, name)
+    if (!addr || addr.isNull()) {
+        if (!(dllName in loadedModules)) {
+            log(" DebugSymbol.loadModule " + dllName);
+        try {
+            DebugSymbol.load(dllName)
+        } catch (err) {
+            return 0;
+        }
+        log(" DebugSymbol.load finished");
+        loadedModules[dllName] = 1
+        }
+        try {
+            log(" DebugSymbol.getFunctionByName: " + functionName);
+            addr = DebugSymbol.getFunctionByName(moduleName + '!' + name)
+            log(" DebugSymbol.getFunctionByName: addr = " + addr);
+        } catch (err) {
+            log(" DebugSymbol.getFunctionByName: Exception")
+        }
+    }
+    resolvedAddresses[functionName] = addr
+    return addr
+    }
+    ```
+    - 需要分别对不同的情况做分析：
+        - 如果函数已导出，则可以直接Module.findExportByName用导出的函数名和dll名获得地址。
+        
+        - 如果该函数未启动且仅在PDB符号文件中记录，则可以调用DebugSymbol.getFunctionByName方法。使用Frida 12.9.8，您可以传递“ DLLName！FunctionName”符号，（新功能）。
+        - DebugSymbol.load的作用是，通过启动符号的加载，来加载最少量的符号，来缓解符号来自远程服务器时，加载很慢的情况。
+        - 此外还使用了字典来节省符号的查找时间。
+
+
+- 实现的几个hook方法（由于我找不到文章所用的恶意程序，这里就不做自己的分析了，原文也写得很详细，直接放链接了）
+- https://www.anquanke.com/post/id/208787#h2-5
+
+
 ## frida hook fuzz尝试
 
 ##### 我们先从简单的小目标练起
