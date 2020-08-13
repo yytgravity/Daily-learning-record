@@ -361,6 +361,9 @@ int main() {
 
 <details>
 <summary>Week2.5～3:（番外）学习hongfuzz</summary>
+
+传送门: [Full-speed Fuzzing在honggfuzz上的应用笔记](https://github.com/yytgravity/Daily-learning-record/tree/master/第2.5周--honggfuzz番外)
+
 刚开始入门学习honggfuzz，先记录一下fuzz的流程，我们先从honggfuzz.c的main函数看起：
 首先在最开始的解析命令行参数的cmdlineParse函数中，会将hfuzz.feedback.dynFileMethod默认设置为_HF_DYNFILE_SOFT，即基于软件的反馈驱动fuzz。如果命令行中有-x选项，表示采用static/dry mode，即不采用反馈驱动。
 
