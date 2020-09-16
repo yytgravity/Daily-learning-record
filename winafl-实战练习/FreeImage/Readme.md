@@ -1,6 +1,6 @@
-##winafl实战练习--FreeImage.dll
+## winafl实战练习--FreeImage.dll
 
-####目标
+#### 目标
 我选择了一款叫做ABC看图的软件，它使用的一个开源图像库-FreeImage.dll，接下来就一他为例，简单联系一下winafl的使用和harness的编写。
 
 下图是我们的目标FreeImage.dll：
