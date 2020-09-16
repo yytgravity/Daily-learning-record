@@ -23,12 +23,12 @@ https://www.ixiacom.com/company/blog/investigating-windows-graphics-vulnerabilit
 
 https://www.pentestpartners.com/security-blog/time-travel-debugging-finding-windows-gdi-flaws/
 
-我的harness代码：
+我的harness代码：https://github.com/yytgravity/Daily-learning-record/tree/master/文件格式fuzz/gdi
 
 pbk：
 https://symeonp.github.io/2020/12/08/phonebook-uaf-analysis.html
 
-我的harness代码：
+我的harness代码：https://github.com/yytgravity/Daily-learning-record/tree/master/文件格式fuzz/pbk
 
 .LNK
 https://blog.vincss.net/2020/06/cve49-microsoft-windows-lnk-remote-code-execution-vuln-cve-2020-1299-eng.html
@@ -38,5 +38,18 @@ https://www.zerodayinitiative.com/blog/2020/3/25/cve-2020-0729-remote-code-execu
 
 .CAB:
 https://www.zerodayinitiative.com/blog/2020/7/8/cve-2020-1300-remote-code-execution-through-microsoft-windows-cab-files
+
+其他的一些笔记：
+https://github.com/yytgravity/Daily-learning-record/tree/master/frida
+
+一些大佬：
+
+https://twitter.com/expend20
+https://twitter.com/klotxl404
+https://twitter.com/dnpushme
+https://twitter.com/symeonp
+https://twitter.com/mathias
+
+
 
 
