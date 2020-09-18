@@ -221,6 +221,26 @@ close(conns[15]);
 
 
 
+几个比较有意思的点：
 
+##### 一、write('\n')会释放chunk
+
+write(conns[13], "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", 0x20);
+下面是几个关键截图：
+![](./img/15.png)
+![](./img/16.png)
+
+可以看到如果没有输入\n就会在find那里返回nops结束。
+
+下面是输入\n之后的代码，关键的函数已给出注释，可以看到在client.wr_buf += client.rd_buf.substr(0, eol+1);执行结束时会调用析构函数，free掉write的第一个参数指向的chunk。
+（substr这个函数还挺好玩的，网上也有类似的坑点
+```
+pwndbg> x/60i 0x5555555565c5=> 0x5555555565c5 <handle_read(ClientCtx&)+400>:	mov    rax,QWORD PTR [rbp-0xd8]   0x5555555565cc <handle_read(ClientCtx&)+407>:	lea    rsi,[rax+0x8]   0x5555555565d0 <handle_read(ClientCtx&)+411>:	mov    rax,QWORD PTR [rbp-0xc8]   0x5555555565d7 <handle_read(ClientCtx&)+418>:	lea    rdx,[rax+0x1]   0x5555555565db <handle_read(ClientCtx&)+422>:	lea    rax,[rbp-0xc0]   0x5555555565e2 <handle_read(ClientCtx&)+429>:	mov    rcx,rdx   0x5555555565e5 <handle_read(ClientCtx&)+432>:	mov    edx,0x0   0x5555555565ea <handle_read(ClientCtx&)+437>:	mov    rdi,rax   0x5555555565ed <handle_read(ClientCtx&)+440>:	call   0x555555555df0   => substr()   0x5555555565f2 <handle_read(ClientCtx&)+445>:	mov    rax,QWORD PTR [rbp-0xd8]   0x5555555565f9 <handle_read(ClientCtx&)+452>:	lea    rdx,[rax+0x28]   0x5555555565fd <handle_read(ClientCtx&)+456>:	lea    rax,[rbp-0xc0]   0x555555556604 <handle_read(ClientCtx&)+463>:	mov    rsi,rax   0x555555556607 <handle_read(ClientCtx&)+466>:	mov    rdi,rdx   0x55555555660a <handle_read(ClientCtx&)+469>:	call   0x555555555e80   => operator+=()   0x55555555660f <handle_read(ClientCtx&)+474>:	lea    rax,[rbp-0xc0]   0x555555556616 <handle_read(ClientCtx&)+481>:	mov    rdi,rax   0x555555556619 <handle_read(ClientCtx&)+484>:	call   0x555555555d30   =>~basic_string()
+```
+
+
+#### 二、uaf的产生
+
+vector_erase触发copy（因为不是尾部）-》basic_string 的operation = -〉swap ，swap之后两个client结构体对应的string chunk的指针就交换了
 
 

