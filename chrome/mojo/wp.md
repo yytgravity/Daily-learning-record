@@ -305,6 +305,8 @@ syscall
 
 ### exp:
 
+![](./img/4.png)
+
 [exp](./exp.html)
 
 
