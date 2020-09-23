@@ -310,6 +310,233 @@ syscall
 [exp](./exp.html)
 
 
+### 看了大佬的wp，醍醐灌顶，在此记录一下：
+
+首先分析一下PlaidStoreImpl的内存布局
+```
++class RenderFrameHost;
++
++class PlaidStoreImpl : public blink::mojom::PlaidStore {
+
+    .....
+
++ private:
++  RenderFrameHost* render_frame_host_;
++  std::map<std::string, std::vector<uint8_t> > data_store_;
++};
+```
+
+PlaidStoreImpl内存布局：
+```
+pwndbg> x/10gx 0x39c8140f23600x39c8140f2360:	0x0000557d860437a0 => vtable	0x000039c813feb400 => render_frame_host_0x39c8140f2370:	map start| 0x000039c8140f6820 =>data_store_ 	0x000039c8140f68200x39c8140f2380:	0x0000000000000000 | map end	
+```
+chrome中std::map的实现如下：
+```
+template <class _Key, class _Tp, class _Compare = less<_Key>,
+          class _Allocator = allocator<pair<const _Key, _Tp> > >
+class _LIBCPP_TEMPLATE_VIS map
+{
+public:
+    ......
+private:
+    typedef _VSTD::__value_type<key_type, mapped_type>             __value_type;
+    typedef __map_value_compare<key_type, __value_type, key_compare> __vc;
+    typedef typename __rebind_alloc_helper<allocator_traits<allocator_type>,
+                                                 __value_type>::type __allocator_type;
+    typedef __tree<__value_type, __vc, __allocator_type>   __base;
+    typedef typename __base::__node_traits                 __node_traits;
+    typedef allocator_traits<allocator_type>               __alloc_traits;
+
+    __base __tree_;
+```
+可以看到它保存了一个__tree类型的成员变量，我们接着来看他的实现：
+
+```
+template <class _Tp, class _Compare, class _Allocator>
+class __tree
+{
+    .....
+    
+private:
+    __iter_pointer                                     __begin_node_;
+    __compressed_pair<__end_node_t, __node_allocator>  __pair1_;
+    __compressed_pair<size_type, value_compare>        __pair3_;
+    
+    .....
+    
+};
+```
+
+第一个成员是指向起始tree_node的指针，我们来看一下它的结构：
+
+```
+template <class _Pointer>
+class __tree_end_node
+{
+public:
+    typedef _Pointer pointer;
+    pointer __left_;
+
+    _LIBCPP_INLINE_VISIBILITY
+    __tree_end_node() _NOEXCEPT : __left_() {}
+};
+
+template <class _VoidPtr>
+class __tree_node_base
+    : public __tree_node_base_types<_VoidPtr>::__end_node_type
+{
+    typedef __tree_node_base_types<_VoidPtr> _NodeBaseTypes;
+
+public:
+    typedef typename _NodeBaseTypes::__node_base_pointer pointer;
+    typedef typename _NodeBaseTypes::__parent_pointer __parent_pointer;
+
+    pointer          __right_;
+    __parent_pointer __parent_;
+    bool __is_black_;
+
+    .....
+    
+};
+
+template <class _Tp, class _VoidPtr>
+class __tree_node
+    : public __tree_node_base<_VoidPtr>
+{
+public:
+    typedef _Tp __node_value_type;
+
+    __node_value_type __value_;
+
+    .....
+
+};
+```
+根据上面我们可以看出，tree_node的大小主要由__node_value_type来决定，它实际上是key-value的pair对，在本题中是 pair<string,vector<uint8_t>> 。其他部分的大小都是固定的：
+
+```
+0x0 pointer __left_;
+0x8 pointer __right_; 
+0x10 __parent_pointer __parent_; 
+0x18 bool __is_black_;
+0x20 __node_value_type __value_;
+```
+内存：
+```
+pwndbg> x/10gx 0x39c8140f23600x39c8140f2360:	0x0000557d860437a0 => vtable	0x000039c813feb400 => render_frame_host_0x39c8140f2370:	map start| 0x000039c8140f6820 =>data_store_ (first tree_node) 	0x000039c8140f68200x39c8140f2380:	0x0000000000000000 | map end
+
+
+pwndbg> x/10gx 0x000039c8140f68200x39c8140f6820:	0x0000000000000000 => __left_	0x0000000000000000 => __right_0x39c8140f6830:	0x000039c8140f2378 => __parent_	0x252f706f746b7301 => __is_black_;0x39c8140f6840:	| 0x0000000000616161	0x00000000000000000x39c8140f6850:	0x0300000000000000| => string	| 0x000039c8140e62500x39c8140f6860:	0x000039c8140e6260	0x000039c8140e6260 | => vector
+```
+
+这里的is_blck为最低位的01，剩下的值为内存中原本的内容（涉及到了结构体对其）。
+
+接下来我们来看一下string和vector：
+##### string
+
+```
+    union __ulx{__long __lx; __short __lxx;};
+
+    enum {__n_words = sizeof(__ulx) / sizeof(size_type)};
+
+    struct __raw
+    {
+        size_type __words[__n_words];
+    };
+
+    struct __rep
+    {
+        union
+        {
+            __long  __l;
+            __short __s;
+            __raw   __r;
+        };
+    };
+
+    __compressed_pair<__rep, allocator_type> __r_;
+```
+basic_string只有唯一一个成员变量 \_\_compressed_pair\<\_\_rep, allocator_type> \_\_r_;它主要作用是保存了一个__rep。
+- __compressed_pair行为类似于std::pair,但是当模版中有空类的时候它会不像std::pair为空类增加大小。多说无益，我们看具体的代码：
+
+```
+#include <utility>
+#include <iostream>
+
+struct E {};
+
+int main() {
+  std::pair<int, E> p;
+  std::cout << sizeof(int) << std::endl;
+  std::cout << sizeof(E) << std::endl;
+  std::cout << sizeof(p) << std::endl;
+  std::cout << sizeof(__compressed_pair<int, E>) << std::endl;
+}
+
+Outputs:
+4
+1
+8
+4
+```
+struct _rep是一个联合体类型，可以保存__long 或 __short，__raw是为了便捷的用数组操作字符串引入的，我们关注的重点是：basic_string将string分为长字符串和短字符串（__long 和 __short）。
+
+```
+    struct __long
+    {
+        pointer   __data_;  // 字符串容量
+        size_type __size_;  // 字符串实际大小
+        size_type __cap_;  // 字符串的chunk指针
+    };
+
+    enum {__min_cap = (sizeof(__long) - 1)/sizeof(value_type) > 2 ?
+                      (sizeof(__long) - 1)/sizeof(value_type) : 2};  //__min_cap = 24-1（long类型的大小减一个字节的大小，1个字节用于存储短字符串的实际大小）
+
+    struct __short //24字节
+    {
+        value_type __data_[__min_cap];
+        struct
+            : __padding<value_type>
+        {
+            unsigned char __size_;
+        };
+    };
+
+```
+
+```
+0x39c8140f6840:	| 0x0000000000616161	0x00000000000000000x39c8140f6850:	  0x0300000000000000 | => string
+```
+可以看到最后一字节为0x03即字符串长度（unsigned char \_\_size_;），前面的内容为value\_type \_\_data\_[__min_cap];
+
+区分long和short的方法：
+- 长字符串 \_\_cap_最后一个字节的末位 bit 固定为 1
+- 短字符串 \_\_size_ 的末位 bit 固定为 0
+
+##### vector
+
+```
+template <class _Tp, class _Allocator>
+class __vector_base
+    : protected __vector_base_common<true>
+{
+
+    ....
+
+    pointer                                         __begin_;
+    pointer                                         __end_;
+    __compressed_pair<pointer, allocator_type> __end_cap_;
+    
+    ....
+    
+```
+三个指针成员变量：起始、终止、容量末尾指针。
+```
+0x39c8140f6858: | 0x000039c8140e62500x39c8140f6860:	0x000039c8140e6260	0x000039c8140e6260 | => vector
+```
+
+
+
 
 
 
