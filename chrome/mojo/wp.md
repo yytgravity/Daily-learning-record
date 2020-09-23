@@ -320,7 +320,7 @@ syscall
 
     .....
 
-+ private:
++ private: 
 +  RenderFrameHost* render_frame_host_;
 +  std::map<std::string, std::vector<uint8_t> > data_store_;
 +};
