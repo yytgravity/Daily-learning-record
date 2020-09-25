@@ -479,7 +479,7 @@ Outputs:
 8
 4
 ```
-struct _rep是一个联合体类型，可以保存__long 或 __short，__raw是为了便捷的用数组操作字符串引入的，我们关注的重点是：basic_string将string分为长字符串和短字符串（__long 和 __short）。
+struct _rep是一个联合体类型，可以保存__long 或 \_\_short，__raw是为了便捷的用数组操作字符串引入的，我们关注的重点是：basic_string将string分为长字符串和短字符串（__long 和 __short）。
 
 ```
     struct __long
