@@ -246,7 +246,7 @@ function getPartitionPageMetadataArea(addr) {
 剩下的内容就和sbx那个题目一样了，这里就不重复了。
 
 
-### 用到的一些基础知识：
+### 用到的一些基础知识（未完还再续。。。）：
 
 #### partitionalloc：
 
