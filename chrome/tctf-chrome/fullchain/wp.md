@@ -176,7 +176,7 @@ pwndbg> x/30gx 0x000032959cc040100x32959cc04010:	0x2040c09c95320000	0x000000000
 ```
 
 接下来就是将leaks的data覆盖为uaf，这样就泄漏出了freelist指针，在阅读wp的过程中，发现这个泄漏指针包含了很多重要信息：
-- 由于我们的freed块都位于Slot span（忘记的可以看上面的superpage 布局）， 所以我们只要将末四位置0就可以得到superpage的基地址。
+- 由于我们的freed块都位于Slot span（忘记的可以看上面的superpage 布局）， 所以我们只要将末五位（低20位）置0就可以得到superpage的基地址。
 
 - PartitionPage大小是0x4000，我们取出泄漏指针的末四位 >> 14就可以得到PartitionPageIndex
 - PartitionPage基地址就是Index*0x4000 + superpage的基地址
@@ -250,7 +250,50 @@ function getPartitionPageMetadataArea(addr) {
 
 #### partitionalloc：
 
-- PartitionAlloc aligns each object allocation with the closest bucket size
+1、chromium 有四个分区：
+```
+    // We have the following four partitions.
+    //   - Node partition: A partition to allocate Nodes. We prepare a
+    //     dedicated partition for Nodes because Nodes are likely to be
+    //     a source of use-after-frees. Another reason is for performance:
+    //     Since Nodes are guaranteed to be used only by the main
+    //     thread, we can bypass acquiring a lock. Also we can improve memory
+    //     locality by putting Nodes together.
+    //   - Layout object partition: A partition to allocate LayoutObjects.
+    //     we prepare a dedicated partition for the same reason as Nodes.
+    //   - Buffer partition: A partition to allocate objects that have a strong
+    //     risk where the length and/or the contents are exploited from user
+    //     scripts. Vectors, HashTables, ArrayBufferContents and Strings are
+    //     allocated in the buffer partition.
+    //   - Fast malloc partition: A partition to allocate all other objects.
+    static PartitionAllocatorGeneric m_fastMallocAllocator;
+    static PartitionAllocatorGeneric m_bufferAllocator;
+#if !ENABLE(OILPAN)
+    static SizeSpecificPartitionAllocator<3328> m_nodeAllocator;
+#endif
+    static SizeSpecificPartitionAllocator<1024> m_layoutAllocator;
+```
+
+
+2、PartitionAlloc有两种实现，分别是PartitionRoot和PartitionRootGeneric，但是我们不会直接使用PartitionRoot和PartitionRootGeneric，而是使用相对应的SizeSpecificPartitionAllocator<size>和PartitionAllocatorGeneric。因为SizeSpecificPartitionAllocator<size>和PartitionAllocatorGeneric还通过PartitionAllocMemoryReclaimer来进行内存的回收。下面列出这两种实现的特点。
+
+- PartitionRoot
+    - Allocation和Free 一个Partition必须要在同一个线程（不支持多线程，所以不需要锁，速度快）
+   
+    - PartitionRoot在init()时，需指定一个最大值MAX_SIZE，后序在该PartitionRoot上申请的空间，都应该小于该对象的MAX_SIZE，否则会申请失败。
+    - 所申请的大小必须与系统指针大小所对齐
+- PartitionRootGeneric
+   
+    - 支持多线程 Allocation和Free 一个Partition，采取自旋锁来进行同步
+    - 可以申请任意大小的空间，无大小限制
+
+3、PartitionAlloc结构：
+
+图：再画了（鸽。。。
+
+
+
+4、 PartitionAlloc aligns each object allocation with the closest bucket size
 
 ```
 var uaf = new Float64Array(16).fill(i2f(0x717171717171n));		var leaks = new Float64Array(128).fill(i2f(0x727272727272n));		var test = new Float64Array(512).fill(i2f(0x737373737373n));		%DebugPrint(uaf);		%DebugPrint(uaf.buffer);		%DebugPrint(leaks);		%DebugPrint(leaks.buffer);		%DebugPrint(test);		%DebugPrint(test.buffer);		debug();
@@ -262,12 +305,85 @@ backing store:
 0x000025e02ce10000  //128
 0x000025e02ce14000  //512
 ```
+这里可以看到不同大小的object在Partitions中是隔离的，且每个buckets大小为0x4000。
+
+
+我们再来查看一下他free之后的内存：
+```
+pwndbg> x/20gx 0x204b080a28bd-10x204b080a28bc:	0x080406e908200dc9	0x00000000080406e90x204b080a28cc:	0x0000000000000000	0x00000001000000000x204b080a28dc:	0x0000000600000000	0x00000000000000000x204b080a28ec:	0x0000000000000000	0x080406e908201ac10x204b080a28fc:	0x080a28bd080411a9	0x00000000000000000x204b080a290c:	0x0000000000000080	0x00000000000000100x204b080a291c:	0x0000061deec0c000	0x00000000000000000x204b080a292c:	0x0000000000000000	0x0804035d000000000x204b080a293c:	0x0000717171717171	0x080406e908200dc90x204b080a294c:	0x00000000080406e9	0x0000000000000000pwndbg> x/20gx 0x204b080a2945-10x204b080a2944:	0x080406e908200dc9	0x00000000080406e90x204b080a2954:	0x0000000000000000	0x00000001000000000x204b080a2964:	0x0000000600000000	0x00000000000000000x204b080a2974:	0x0000000000000000	0x080406e908201ac10x204b080a2984:	0x080a2945080411a9	0x00000000000000000x204b080a2994:	0x0000000000000400	0x00000000000000800x204b080a29a4:	0x0000061deec10000	0x00000000000000000x204b080a29b4:	0x0000000000000000	0x0804035d000000000x204b080a29c4:	0x0000727272727272	0x080406e908200dc90x204b080a29d4:	0x00000000080406e9	0x0000000000000000pwndbg> x/10gx 0x0000061deec0c0000x61deec0c000:	0x80c0c0ee1d060000	0x00007171717171710x61deec0c010:	0x0000717171717171	0x00007171717171710x61deec0c020:	0x0000717171717171	0x00007171717171710x61deec0c030:	0x0000717171717171	0x00007171717171710x61deec0c040:	0x0000717171717171	0x0000717171717171pwndbg> x/10gx 0x0000061deec100000x61deec10000:	0x0004c1ee1d060000	0x00007272727272720x61deec10010:	0x0000727272727272	0x00007272727272720x61deec10020:	0x0000727272727272	0x00007272727272720x61deec10030:	0x0000727272727272	0x00007272727272720x61deec10040:	0x0000727272727272	0x0000727272727272pwndbg> x/10gx 0x0000061deec104000x61deec10400:	0x0008c1ee1d060000	0x00000000000000000x61deec10410:	0x0000000000000000	0x00000000000000000x61deec10420:	0x0000000000000000	0x00000000000000000x61deec10430:	0x0000000000000000	0x00000000000000000x61deec10440:	0x0000000000000000	0x0000000000000000pwndbg> x/10gx 0x0000061deec108000x61deec10800:	0x000cc1ee1d060000	0x00000000000000000x61deec10810:	0x0000000000000000	0x00000000000000000x61deec10820:	0x0000000000000000	0x00000000000000000x61deec10830:	0x0000000000000000	0x00000000000000000x61deec10840:	0x0000000000000000	0x0000000000000000 
+```
+
+在freed块中我们发现一些比较有趣的指针（这里以大小为128的object为例），他指向的freed块为0x0000061deec10400，之后又指向0x0000061deec10800，这里初步推断一个buckets中是以0x400为单位来分配空间的。
+实验一：我们申请三个128大小的object查看他的backing_store:
+```
+pwndbg> x/20gx 0x2ef0080a2955-10x2ef0080a2954:	0x080406e908200dc9	0x00000400080406e90x2ef0080a2964:	0x47a1000000000000	0xfb7edf30000006f20x2ef0080a2974:	0x0000000200002ff0	0x00000000000000000x2ef0080a2984:	0x0000000000000000	0x080406e908201ac10x2ef0080a2994:	0x080a2955080411a9	0x00000000000000000x2ef0080a29a4:	0x0000000000000400	0x00000000000000800x2ef0080a29b4:	0x000006f247a10000 => backing_store	0x00000000000000000x2ef0080a29c4:	0x0000000000000000	0x0804035d000000000x2ef0080a29d4:	0x0000727272727272	0x080406e908200dc90x2ef0080a29e4:	0x00001000080406e9	0x47a1400000000000pwndbg> x/20gx 0x2ef0080a2a65-10x2ef0080a2a64:	0x080406e908200dc9	0x00000400080406e90x2ef0080a2a74:	0x47a1040000000000	0xfb7eded0000006f20x2ef0080a2a84:	0x0000000200002ff0	0x00000000000000000x2ef0080a2a94:	0x0000000000000000	0x080406e908201ac10x2ef0080a2aa4:	0x080a2a65080411a9	0x00000000000000000x2ef0080a2ab4:	0x0000000000000400	0x00000000000000800x2ef0080a2ac4:	0x000006f247a10400 => backing_store	0x00000000000000000x2ef0080a2ad4:	0x0000000000000000	0x0804035d000000000x2ef0080a2ae4:	0x0000717171717171	0x080406e908200dc90x2ef0080a2af4:	0x00000400080406e9	0x47a1080000000000pwndbg> x/20gx 0x2ef0080a2aed-10x2ef0080a2aec:	0x080406e908200dc9	0x00000400080406e90x2ef0080a2afc:	0x47a1080000000000	0xfb7eddb0000006f20x2ef0080a2b0c:	0x0000000200002ff0	0x00000000000000000x2ef0080a2b1c:	0x0000000000000000	0x080406e908201ac10x2ef0080a2b2c:	0x080a2aed080411a9	0x00000000000000000x2ef0080a2b3c:	0x0000000000000400	0x00000000000000800x2ef0080a2b4c:	0x000006f247a10800 => backing_store	0x00000000000000000x2ef0080a2b5c:	0x0000000000000000	0x0804035d000000000x2ef0080a2b6c:	0x0000727272727272	0x00000024080404b10x2ef0080a2b7c:	0x0804030d0804030d	0x0804030d0804030d
+```
+可以发现确实和设想的一样以0x400为单位分配。这里还验证了16大小，这时单位为0x80。这里推断单位为当前buckets存储的object大小的8倍。 接下来去瞅瞅源码：
 
 ```
-pwndbg> x/20gx 0x204b080a28bd-10x204b080a28bc:	0x080406e908200dc9	0x00000000080406e90x204b080a28cc:	0x0000000000000000	0x00000001000000000x204b080a28dc:	0x0000000600000000	0x00000000000000000x204b080a28ec:	0x0000000000000000	0x080406e908201ac10x204b080a28fc:	0x080a28bd080411a9	0x00000000000000000x204b080a290c:	0x0000000000000080	0x00000000000000100x204b080a291c:	0x0000061deec0c000	0x00000000000000000x204b080a292c:	0x0000000000000000	0x0804035d000000000x204b080a293c:	0x0000717171717171	0x080406e908200dc90x204b080a294c:	0x00000000080406e9	0x0000000000000000pwndbg> x/20gx 0x204b080a2945-10x204b080a2944:	0x080406e908200dc9	0x00000000080406e90x204b080a2954:	0x0000000000000000	0x00000001000000000x204b080a2964:	0x0000000600000000	0x00000000000000000x204b080a2974:	0x0000000000000000	0x080406e908201ac10x204b080a2984:	0x080a2945080411a9	0x00000000000000000x204b080a2994:	0x0000000000000400	0x00000000000000800x204b080a29a4:	0x0000061deec10000	0x00000000000000000x204b080a29b4:	0x0000000000000000	0x0804035d000000000x204b080a29c4:	0x0000727272727272	0x080406e908200dc90x204b080a29d4:	0x00000000080406e9	0x0000000000000000pwndbg> x/10gx 0x0000061deec0c0000x61deec0c000:	0x80c0c0ee1d060000	0x00007171717171710x61deec0c010:	0x0000717171717171	0x00007171717171710x61deec0c020:	0x0000717171717171	0x00007171717171710x61deec0c030:	0x0000717171717171	0x00007171717171710x61deec0c040:	0x0000717171717171	0x0000717171717171pwndbg> x/10gx 0x0000061deec100000x61deec10000:	0x0004c1ee1d060000	0x00007272727272720x61deec10010:	0x0000727272727272	0x00007272727272720x61deec10020:	0x0000727272727272	0x00007272727272720x61deec10030:	0x0000727272727272	0x00007272727272720x61deec10040:	0x0000727272727272	0x0000727272727272pwndbg> x/10gx 0x0000061deec140000x61deec14000:	0x0000000000000000	0x00007373737373730x61deec14010:	0x0000737373737373	0x00007373737373730x61deec14020:	0x0000737373737373	0x00007373737373730x61deec14030:	0x0000737373737373	0x00007373737373730x61deec14040:	0x0000737373737373	0x0000737373737373pwndbg> x/10gx 0x0000061deec104000x61deec10400:	0x0008c1ee1d060000	0x00000000000000000x61deec10410:	0x0000000000000000	0x00000000000000000x61deec10420:	0x0000000000000000	0x00000000000000000x61deec10430:	0x0000000000000000	0x00000000000000000x61deec10440:	0x0000000000000000	0x0000000000000000pwndbg> x/10gx 0x0000061deec108000x61deec10800:	0x000cc1ee1d060000	0x00000000000000000x61deec10810:	0x0000000000000000	0x00000000000000000x61deec10820:	0x0000000000000000	0x00000000000000000x61deec10830:	0x0000000000000000	0x00000000000000000x61deec10840:	0x0000000000000000	0x0000000000000000 
+static const size_t kAllocationGranularity = sizeof(void*);
+static const size_t kAllocationGranularityMask = kAllocationGranularity - 1;
+static const size_t kBucketShift = (kAllocationGranularity == 8) ? 3 : 2;
+
+
+ALWAYS_INLINE void* partitionBucketAlloc(PartitionRootBase* root, int flags, size_t size, PartitionBucket* bucket)
+{
+    PartitionPage* page = bucket->activePagesHead;
+    // Check that this page is neither full nor freed.
+    ASSERT(page->numAllocatedSlots >= 0);
+    void* ret = page->freelistHead;
+    if (LIKELY(ret != 0)) {
+        // If these asserts fire, you probably corrupted memory.
+        ASSERT(partitionPointerIsValid(ret));
+        // All large allocations must go through the slow path to correctly
+        // update the size metadata.
+        ASSERT(partitionPageGetRawSize(page) == 0);
+        PartitionFreelistEntry* newHead = partitionFreelistMask(static_cast<PartitionFreelistEntry*>(ret)->next);
+        page->freelistHead = newHead;
+        page->numAllocatedSlots++;
+    } else {
+        ret = partitionAllocSlowPath(root, flags, size, bucket);
+        ASSERT(!ret || partitionPointerIsValid(ret));
+    }
+#if ENABLE(ASSERT)
+    if (!ret)
+        return 0;
+    // Fill the uninitialized pattern, and write the cookies.
+    page = partitionPointerToPage(ret);
+    size_t slotSize = page->bucket->slotSize;
+    size_t rawSize = partitionPageGetRawSize(page);
+    if (rawSize) {
+        ASSERT(rawSize == size);
+        slotSize = rawSize;
+    }
+    size_t noCookieSize = partitionCookieSizeAdjustSubtract(slotSize);
+    char* charRet = static_cast<char*>(ret);
+    // The value given to the application is actually just after the cookie.
+    ret = charRet + kCookieSize;
+    memset(ret, kUninitializedByte, noCookieSize);
+    partitionCookieWriteValue(charRet);
+    partitionCookieWriteValue(charRet + kCookieSize + noCookieSize);
+#endif
+    return ret;
+}
+ALWAYS_INLINE void* partitionAlloc(PartitionRoot* root, size_t size, const char* typeName)
+{
+#if defined(MEMORY_TOOL_REPLACES_ALLOCATOR)
+    void* result = malloc(size);
+    RELEASE_ASSERT(result);
+    return result;
+#else
+    size_t requestedSize = size;
+    size = partitionCookieSizeAdjustAdd(size);
+    ASSERT(root->initialized);
+    size_t index = size >> kBucketShift;
+    ASSERT(index < root->numBuckets);
+    ASSERT(size == index << kBucketShift);
+    PartitionBucket* bucket = &root->buckets()[index];
+    void* result = partitionBucketAlloc(root, 0, size, bucket);
+    PartitionAllocHooks::allocationHookIfEnabled(result, requestedSize, typeName);
+    return result;
+#endif // defined(MEMORY_TOOL_REPLACES_ALLOCATOR)
+}
 ```
-
-
-
-
 
