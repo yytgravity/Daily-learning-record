@@ -250,6 +250,19 @@ function getPartitionPageMetadataArea(addr) {
 
 #### partitionalloc：
 
+- 简单介绍一下partitionalloc，他是为了解决一些传统分配器（ptmalloc or jemalloc等）产生的问题而诞生的，当传统分配器为object分配内存时，分配器并不知道他是什么类型的object，也不允许你去选择存储的位置，这就导致了一个c++ object它既可以和string相邻，也可以和函数指针结构相邻。这就使得UAF的利用非常简单，因为他们都在一个heap。而partitionalloc将object存储在特定的bucket中，不同类型的object就不一定会分配到同一个heap，这样就加大了uaf的使用难度。
+
+- partitionalloc的核心是superpage，它是一个2MB的block，并且以一个保护页开始，具体结构就以本题为例：
+
+```
+    0x21ea10800000     0x21ea10801000 ---p     1000 0  //Guard page    
+    0x21ea10801000     0x21ea10802000 rw-p     1000 0  //Metadata page    
+    0x21ea10802000     0x21ea10804000 ---p     2000 0  //Guard pages    
+    0x21ea10804000     0x21ea1080c000 rw-p     8000 0  //Slot span    
+    0x21ea1080c000     0x21ea10a00000 ---p   1f4000 0  //Guard pages
+```
+- Slot span是PartitionPage结构的连续范围。
+
 1、chromium 有四个分区：
 ```
     // We have the following four partitions.
@@ -289,43 +302,17 @@ function getPartitionPageMetadataArea(addr) {
 
 3、PartitionAlloc结构：
 
-图：再画了（鸽。。。
+![](./img/1.png)
 
+![](./img/2.png)
 
+![](./img/3.png)
 
-4、 PartitionAlloc aligns each object allocation with the closest bucket size
+4、源码时间：
 
-```
-var uaf = new Float64Array(16).fill(i2f(0x717171717171n));		var leaks = new Float64Array(128).fill(i2f(0x727272727272n));		var test = new Float64Array(512).fill(i2f(0x737373737373n));		%DebugPrint(uaf);		%DebugPrint(uaf.buffer);		%DebugPrint(leaks);		%DebugPrint(leaks.buffer);		%DebugPrint(test);		%DebugPrint(test.buffer);		debug();
-
-
-backing store:
-
-0x000025e02ce0c000  //16
-0x000025e02ce10000  //128
-0x000025e02ce14000  //512
-```
-这里可以看到不同大小的object在Partitions中是隔离的，且每个buckets大小为0x4000。
-
-
-我们再来查看一下他free之后的内存：
-```
-pwndbg> x/20gx 0x204b080a28bd-10x204b080a28bc:	0x080406e908200dc9	0x00000000080406e90x204b080a28cc:	0x0000000000000000	0x00000001000000000x204b080a28dc:	0x0000000600000000	0x00000000000000000x204b080a28ec:	0x0000000000000000	0x080406e908201ac10x204b080a28fc:	0x080a28bd080411a9	0x00000000000000000x204b080a290c:	0x0000000000000080	0x00000000000000100x204b080a291c:	0x0000061deec0c000	0x00000000000000000x204b080a292c:	0x0000000000000000	0x0804035d000000000x204b080a293c:	0x0000717171717171	0x080406e908200dc90x204b080a294c:	0x00000000080406e9	0x0000000000000000pwndbg> x/20gx 0x204b080a2945-10x204b080a2944:	0x080406e908200dc9	0x00000000080406e90x204b080a2954:	0x0000000000000000	0x00000001000000000x204b080a2964:	0x0000000600000000	0x00000000000000000x204b080a2974:	0x0000000000000000	0x080406e908201ac10x204b080a2984:	0x080a2945080411a9	0x00000000000000000x204b080a2994:	0x0000000000000400	0x00000000000000800x204b080a29a4:	0x0000061deec10000	0x00000000000000000x204b080a29b4:	0x0000000000000000	0x0804035d000000000x204b080a29c4:	0x0000727272727272	0x080406e908200dc90x204b080a29d4:	0x00000000080406e9	0x0000000000000000pwndbg> x/10gx 0x0000061deec0c0000x61deec0c000:	0x80c0c0ee1d060000	0x00007171717171710x61deec0c010:	0x0000717171717171	0x00007171717171710x61deec0c020:	0x0000717171717171	0x00007171717171710x61deec0c030:	0x0000717171717171	0x00007171717171710x61deec0c040:	0x0000717171717171	0x0000717171717171pwndbg> x/10gx 0x0000061deec100000x61deec10000:	0x0004c1ee1d060000	0x00007272727272720x61deec10010:	0x0000727272727272	0x00007272727272720x61deec10020:	0x0000727272727272	0x00007272727272720x61deec10030:	0x0000727272727272	0x00007272727272720x61deec10040:	0x0000727272727272	0x0000727272727272pwndbg> x/10gx 0x0000061deec104000x61deec10400:	0x0008c1ee1d060000	0x00000000000000000x61deec10410:	0x0000000000000000	0x00000000000000000x61deec10420:	0x0000000000000000	0x00000000000000000x61deec10430:	0x0000000000000000	0x00000000000000000x61deec10440:	0x0000000000000000	0x0000000000000000pwndbg> x/10gx 0x0000061deec108000x61deec10800:	0x000cc1ee1d060000	0x00000000000000000x61deec10810:	0x0000000000000000	0x00000000000000000x61deec10820:	0x0000000000000000	0x00000000000000000x61deec10830:	0x0000000000000000	0x00000000000000000x61deec10840:	0x0000000000000000	0x0000000000000000 
-```
-
-在freed块中我们发现一些比较有趣的指针（这里以大小为128的object为例），他指向的freed块为0x0000061deec10400，之后又指向0x0000061deec10800，这里初步推断一个buckets中是以0x400为单位来分配空间的。
-实验一：我们申请三个128大小的object查看他的backing_store:
-```
-pwndbg> x/20gx 0x2ef0080a2955-10x2ef0080a2954:	0x080406e908200dc9	0x00000400080406e90x2ef0080a2964:	0x47a1000000000000	0xfb7edf30000006f20x2ef0080a2974:	0x0000000200002ff0	0x00000000000000000x2ef0080a2984:	0x0000000000000000	0x080406e908201ac10x2ef0080a2994:	0x080a2955080411a9	0x00000000000000000x2ef0080a29a4:	0x0000000000000400	0x00000000000000800x2ef0080a29b4:	0x000006f247a10000 => backing_store	0x00000000000000000x2ef0080a29c4:	0x0000000000000000	0x0804035d000000000x2ef0080a29d4:	0x0000727272727272	0x080406e908200dc90x2ef0080a29e4:	0x00001000080406e9	0x47a1400000000000pwndbg> x/20gx 0x2ef0080a2a65-10x2ef0080a2a64:	0x080406e908200dc9	0x00000400080406e90x2ef0080a2a74:	0x47a1040000000000	0xfb7eded0000006f20x2ef0080a2a84:	0x0000000200002ff0	0x00000000000000000x2ef0080a2a94:	0x0000000000000000	0x080406e908201ac10x2ef0080a2aa4:	0x080a2a65080411a9	0x00000000000000000x2ef0080a2ab4:	0x0000000000000400	0x00000000000000800x2ef0080a2ac4:	0x000006f247a10400 => backing_store	0x00000000000000000x2ef0080a2ad4:	0x0000000000000000	0x0804035d000000000x2ef0080a2ae4:	0x0000717171717171	0x080406e908200dc90x2ef0080a2af4:	0x00000400080406e9	0x47a1080000000000pwndbg> x/20gx 0x2ef0080a2aed-10x2ef0080a2aec:	0x080406e908200dc9	0x00000400080406e90x2ef0080a2afc:	0x47a1080000000000	0xfb7eddb0000006f20x2ef0080a2b0c:	0x0000000200002ff0	0x00000000000000000x2ef0080a2b1c:	0x0000000000000000	0x080406e908201ac10x2ef0080a2b2c:	0x080a2aed080411a9	0x00000000000000000x2ef0080a2b3c:	0x0000000000000400	0x00000000000000800x2ef0080a2b4c:	0x000006f247a10800 => backing_store	0x00000000000000000x2ef0080a2b5c:	0x0000000000000000	0x0804035d000000000x2ef0080a2b6c:	0x0000727272727272	0x00000024080404b10x2ef0080a2b7c:	0x0804030d0804030d	0x0804030d0804030d
-```
-可以发现确实和设想的一样以0x400为单位分配。这里还验证了16大小，这时单位为0x80。这里推断单位为当前buckets存储的object大小的8倍。 接下来去瞅瞅源码：
+###### PartitionRoot：
 
 ```
-static const size_t kAllocationGranularity = sizeof(void*);
-static const size_t kAllocationGranularityMask = kAllocationGranularity - 1;
-static const size_t kBucketShift = (kAllocationGranularity == 8) ? 3 : 2;
-
-
 ALWAYS_INLINE void* partitionBucketAlloc(PartitionRootBase* root, int flags, size_t size, PartitionBucket* bucket)
 {
     PartitionPage* page = bucket->activePagesHead;
@@ -366,6 +353,8 @@ ALWAYS_INLINE void* partitionBucketAlloc(PartitionRootBase* root, int flags, siz
 #endif
     return ret;
 }
+
+
 ALWAYS_INLINE void* partitionAlloc(PartitionRoot* root, size_t size, const char* typeName)
 {
 #if defined(MEMORY_TOOL_REPLACES_ALLOCATOR)
@@ -386,4 +375,134 @@ ALWAYS_INLINE void* partitionAlloc(PartitionRoot* root, size_t size, const char*
 #endif // defined(MEMORY_TOOL_REPLACES_ALLOCATOR)
 }
 ```
+partitionAlloc实际上是通过partitionBucketAlloc来实现的，在partitionBucketAlloc中：
+```
+    void* ret = page->freelistHead;
+    if (LIKELY(ret != 0)) {
+        // If these asserts fire, you probably corrupted memory.
+        ASSERT(partitionPointerIsValid(ret));
+        // All large allocations must go through the slow path to correctly
+        // update the size metadata.
+        ASSERT(partitionPageGetRawSize(page) == 0);
+        PartitionFreelistEntry* newHead = partitionFreelistMask(static_cast<PartitionFreelistEntry*>(ret)->next);
+        page->freelistHead = newHead;
+        page->numAllocatedSlots++;
+    } else {
+        ret = partitionAllocSlowPath(root, flags, size, bucket);
+        ASSERT(!ret || partitionPointerIsValid(ret));
+    }
+```
+在这里会选择hot path or slow path，已为此bucket大小分配页面时采用hot path，会根据使用者请求的大小来确定对应的bucket，再确定bucket之后就会保存freelistHead的值，之后将其更新为next，并将原head值返回。反之使用slow path，他分为四种情况：
+- 一、针对非常大的大小的直接映射，由partitionDirectMap函数处理。
+- 二、触发一个函数partitionSetNewActivePage，该函数接受最初传递给partitionBucketAlloc的bucket，并扫描它的页面列表以找到合适的页面。合适的页面被描述为具有free slots的页面，它可以满足原始调用者所请求的分配。
+- 三、检查空的和已分解的page list。如果从任何一个列表中找到合适的页面，就会选择它。
+- 四、需要一个全新的page。
+
+
+###### PartitionRootGeneric：
+
+在看代码之前先插入一下bucket：
+
+```
+static const size_t kGenericMinBucketedOrder = 4; // 8 bytes.
+static const size_t kGenericMaxBucketedOrder = 20; // Largest bucketed order is 1<<(20-1) (storing 512KB -> almost 1MB)
+static const size_t kGenericNumBucketedOrders = (kGenericMaxBucketedOrder - kGenericMinBucketedOrder) + 1;
+static const size_t kGenericNumBucketsPerOrderBits = 3; // Eight buckets per order (for the higher orders), e.g. order 8 is 128, 144, 160, ..., 240
+static const size_t kGenericNumBucketsPerOrder = 1 << kGenericNumBucketsPerOrderBits;
+static const size_t kGenericNumBuckets = kGenericNumBucketedOrders * kGenericNumBucketsPerOrder;
+static const size_t kGenericSmallestBucket = 1 << (kGenericMinBucketedOrder - 1);
+static const size_t kGenericMaxBucketSpacing = 1 << ((kGenericMaxBucketedOrder - 1) - kGenericNumBucketsPerOrderBits);
+static const size_t kGenericMaxBucketed = (1 << (kGenericMaxBucketedOrder - 1)) + ((kGenericNumBucketsPerOrder - 1) * kGenericMaxBucketSpacing);
+static const size_t kGenericMinDirectMappedDownsize = kGenericMaxBucketed + 1; // Limit when downsizing a direct mapping using realloc().
+static const size_t kGenericMaxDirectMapped = INT_MAX - kSystemPageSize;
+static const size_t kBitsPerSizet = sizeof(void*) * CHAR_BIT;
+```
+PartitionAllocatorGeneric拥有的Bucket数量(kGenericNumBuckets)为136(kGenericNumBucketedOrders * kGenericNumBucketsPerOrder = 17 * 8),这里为每个order安排了8个bucket（kGenericSmallestBucket），下面有一张图共136个bucket（包括无效的即大小不合适的bucket）：
+![](./img/4.png)
+
+
+```
+ALWAYS_INLINE PartitionBucket* partitionGenericSizeToBucket(PartitionRootGeneric* root, size_t size)
+{
+    size_t order = kBitsPerSizet - countLeadingZerosSizet(size);
+    // The order index is simply the next few bits after the most significant bit.
+    size_t orderIndex = (size >> root->orderIndexShifts[order]) & (kGenericNumBucketsPerOrder - 1);
+    // And if the remaining bits are non-zero we must bump the bucket up.
+    size_t subOrderIndex = size & root->orderSubIndexMasks[order];
+    PartitionBucket* bucket = root->bucketLookups[(order << kGenericNumBucketsPerOrderBits) + orderIndex + !!subOrderIndex];
+    ASSERT(!bucket->slotSize || bucket->slotSize >= size);
+    ASSERT(!(bucket->slotSize % kGenericSmallestBucket));
+    return bucket;
+}
+
+
+ALWAYS_INLINE void* partitionAllocGenericFlags(PartitionRootGeneric* root, int flags, size_t size, const char* typeName)
+{
+#if defined(MEMORY_TOOL_REPLACES_ALLOCATOR)
+    void* result = malloc(size);
+    RELEASE_ASSERT(result);
+    return result;
+#else
+    ASSERT(root->initialized);
+    size_t requestedSize = size;
+    size = partitionCookieSizeAdjustAdd(size);
+    PartitionBucket* bucket = partitionGenericSizeToBucket(root, size);
+    void* ret = nullptr;
+    {
+        SpinLock::Guard guard(root->lock);
+        // TODO(bashi): Remove following RELEAE_ASSERT()s once we find the cause of
+        // http://crbug.com/514141
+#if OS(ANDROID)
+        RELEASE_ASSERT(bucket >= &root->buckets[0] || bucket == &PartitionRootGeneric::gPagedBucket);
+        RELEASE_ASSERT(bucket <= &root->buckets[kGenericNumBuckets - 1] || bucket == &PartitionRootGeneric::gPagedBucket);
+        RELEASE_ASSERT(root->initialized);
+#endif
+        ret = partitionBucketAlloc(root, flags, size, bucket);
+    }
+    PartitionAllocHooks::allocationHookIfEnabled(ret, requestedSize, typeName);
+    return ret;
+#endif
+}
+
+
+ALWAYS_INLINE void* partitionAllocGeneric(PartitionRootGeneric* root, size_t size, const char* typeName)
+{
+    return partitionAllocGenericFlags(root, 0, size, typeName);
+}
+```
+partitionAllocGeneric依旧主要还是通过partitionBucketAlloc实现，但需要先partitionGenericSizeToBucket来获得size对应的bucket。
+
+我们在为ArrayBuffer的backing store分配时就采用的这种方法
+
+
+5、 PartitionAlloc aligns each object allocation with the closest bucket size
+
+```
+        var uaf = new Float64Array(16).fill(i2f(0x717171717171n));		var leaks = new Float64Array(128).fill(i2f(0x727272727272n));		var test = new Float64Array(512).fill(i2f(0x737373737373n));		%DebugPrint(uaf);		%DebugPrint(uaf.buffer);		%DebugPrint(leaks);		%DebugPrint(leaks.buffer);		%DebugPrint(test);		%DebugPrint(test.buffer);		debug();
+
+
+backing store:
+
+0x000025e02ce0c000  //16
+0x000025e02ce10000  //128
+0x000025e02ce14000  //512
+```
+这里可以看到不同大小的object在Partitions中是隔离的，且每类buckets大小为0x4000。
+
+6、我们再来看一下刚才的object free之后的内存：
+```
+pwndbg> x/20gx 0x204b080a28bd-10x204b080a28bc:	0x080406e908200dc9	0x00000000080406e90x204b080a28cc:	0x0000000000000000	0x00000001000000000x204b080a28dc:	0x0000000600000000	0x00000000000000000x204b080a28ec:	0x0000000000000000	0x080406e908201ac10x204b080a28fc:	0x080a28bd080411a9	0x00000000000000000x204b080a290c:	0x0000000000000080	0x00000000000000100x204b080a291c:	0x0000061deec0c000	0x00000000000000000x204b080a292c:	0x0000000000000000	0x0804035d000000000x204b080a293c:	0x0000717171717171	0x080406e908200dc90x204b080a294c:	0x00000000080406e9	0x0000000000000000
+pwndbg> x/20gx 0x204b080a2945-10x204b080a2944:	0x080406e908200dc9	0x00000000080406e90x204b080a2954:	0x0000000000000000	0x00000001000000000x204b080a2964:	0x0000000600000000	0x00000000000000000x204b080a2974:	0x0000000000000000	0x080406e908201ac10x204b080a2984:	0x080a2945080411a9	0x00000000000000000x204b080a2994:	0x0000000000000400	0x00000000000000800x204b080a29a4:	0x0000061deec10000	0x00000000000000000x204b080a29b4:	0x0000000000000000	0x0804035d000000000x204b080a29c4:	0x0000727272727272	0x080406e908200dc90x204b080a29d4:	0x00000000080406e9	0x0000000000000000pwndbg> x/10gx 0x0000061deec0c0000x61deec0c000:	0x80c0c0ee1d060000	0x00007171717171710x61deec0c010:	0x0000717171717171	0x00007171717171710x61deec0c020:	0x0000717171717171	0x00007171717171710x61deec0c030:	0x0000717171717171	0x00007171717171710x61deec0c040:	0x0000717171717171	0x0000717171717171
+pwndbg> x/10gx 0x0000061deec100000x61deec10000:	0x0004c1ee1d060000	0x00007272727272720x61deec10010:	0x0000727272727272	0x00007272727272720x61deec10020:	0x0000727272727272	0x00007272727272720x61deec10030:	0x0000727272727272	0x00007272727272720x61deec10040:	0x0000727272727272	0x0000727272727272pwndbg> x/10gx 0x0000061deec104000x61deec10400:	0x0008c1ee1d060000	0x00000000000000000x61deec10410:	0x0000000000000000	0x00000000000000000x61deec10420:	0x0000000000000000	0x00000000000000000x61deec10430:	0x0000000000000000	0x00000000000000000x61deec10440:	0x0000000000000000	0x0000000000000000
+pwndbg> x/10gx 0x0000061deec108000x61deec10800:	0x000cc1ee1d060000	0x00000000000000000x61deec10810:	0x0000000000000000	0x00000000000000000x61deec10820:	0x0000000000000000	0x00000000000000000x61deec10830:	0x0000000000000000	0x00000000000000000x61deec10840:	0x0000000000000000	0x0000000000000000 
+```
+
+这里以大小为128的object为例，他的freelist为0x0000061deec10400->0x0000061deec10800->0x0000061deec10c00等等。
+
+可以发现每个freed块大小为0x400。这里还验证了16大小，这时为0x80。这里推断chunk大小为当前buckets存储的object大小的8倍。 
+
+
+### v8
+
+
 
