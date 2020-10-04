@@ -26,3 +26,5 @@ function debug(){    for(let i = 0; i < 0x100000; i++){        for(let j = 0; 
 sh中增加--js-flags="--allow-natives-syntax"
 
 可以在exp中添加%DebugPrint();来提供调试信息，下断点的方式就是用上面提到的debug()函数，在循环的时候ctrl+c，在 ps ax，新开一个gdb attach到 d8进程。
+
+![](./img/1.png)
