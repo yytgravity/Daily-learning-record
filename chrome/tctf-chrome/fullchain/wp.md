@@ -308,6 +308,14 @@ function getPartitionPageMetadataArea(addr) {
 
 ![](./img/3.png)
 
+自己画我唯唯诺诺，盗图我重拳出击：
+
+![](./img/5.png)
+![](./img/6.png)
+![](./img/7.png)
+![](./img/8.png)
+![](./img/9.png)
+
 4、源码时间：
 
 ###### PartitionRoot：
@@ -504,7 +512,198 @@ pwndbg> x/20gx 0x204b080a28bd-10x204b080a28bc:	0x080406e908200dc9	0x00000000080
 
 ### v8
 
+V8 类型继承图：
+![](./img/10.jpg)
+
+完整版：
+```
+// Inheritance hierarchy:
+// - Object
+//      - Smi (immediate small integer)
+//      - HeapObject (superclass for everything allocated in the heap)
+//          - JSReceiver (suitable for property access)
+//              - JSObject
+//              - JSArray
+//              - JSArrayBuffer
+//              - JSArrayBufferView
+//                  - JSTypedArray
+//                  - JSDataView
+//              - JSBoundFunction
+//              - JSCollection
+//                  - JSSet
+//                  - JSMap
+//              - JSStringIterator
+//              - JSSetIterator
+//              - JSMapIterator
+//              - JSWeakCollection
+//                   - JSWeakMap
+//                   - JSWeakSet
+//              - JSRegExp
+//              - JSFunction
+//              - JSGeneratorObject
+//              - JSGlobalObject
+//              - JSGlobalProxy
+//              - JSValue
+//                   - JSDate
+//              - JSMessageObject
+//              - JSModuleNamespace
+//              - WasmInstanceObject
+//              - WasmMemoryObject
+//              - WasmModuleObject
+//              - WasmTableObject
+//          - JSProxy
+//      - FixedArrayBase
+//          - ByteArray
+//          - BytecodeArray
+//          - FixedArray
+//              - DescriptorArray
+//              - FrameArray
+//              - HashTable
+//                  - Dictionary
+//                  - StringTable
+//                  - StringSet
+//                  - CompilationCacheTable
+//                  - CodeCacheHashTable
+//                  - MapCache
+//              - OrderedHashTable
+//                  - OrderedHashSet
+//                  - OrderedHashMap
+//              - Context
+//              - FeedbackMetadata
+//              - FeedbackVector
+//              - TemplateList
+//              - TransitionArray
+//              - ScopeInfo
+//              - ModuleInfo
+//              - ScriptContextTable
+//              - WeakFixedArray
+//              - WasmSharedModuleData
+//              - WasmCompiledModule
+//          - FixedDoubleArray
+//      - Name
+//          - String
+//              - SeqString
+//                  - SeqOneByteString
+//                  - SeqTwoByteString
+//              - SlicedString
+//              - ConsString
+//              - ThinString
+//              - ExternalString
+//                  - ExternalOneByteString
+//                  - ExternalTwoByteString
+//              - InternalizedString
+//                  - SeqInternalizedString
+//                      - SeqOneByteInternalizedString
+//                      - SeqTwoByteInternalizedString
+//                  - ConsInternalizedString
+//                  - ExternalInternalizedString
+//                      - ExternalOneByteInternalizedString
+//                      - ExternalTwoByteInternalizedString
+//          - Symbol
+//      - HeapNumber
+//      - Cell
+//      - PropertyCell
+//      - PropertyArray
+//      - Code
+//      - AbstractCode, a wrapper around Code or BytecodeArray
+//      - Map
+//      - Oddball
+//      - Foreign
+//      - SmallOrderedHashTable
+//          - SmallOrderedHashMap
+//          - SmallOrderedHashSet
+//      - SharedFunctionInfo
+//      - Struct
+//          - AccessorInfo
+//          - PromiseResolveThenableJobInfo
+//          - PromiseReactionJobInfo
+//          - AccessorPair
+//          - AccessCheckInfo
+//          - InterceptorInfo
+//          - CallHandlerInfo
+//          - TemplateInfo
+//              - FunctionTemplateInfo
+//              - ObjectTemplateInfo
+//          - Script
+//          - DebugInfo
+//          - BreakPointInfo
+//          - StackFrameInfo
+//          - SourcePositionTableWithFrameCache
+//          - CodeCache
+//          - PrototypeInfo
+//          - Module
+//          - ModuleInfoEntry
+//          - PreParsedScopeData
+//      - WeakCell
+```
+
+##### JavaScript Object
+
+###### SMI
+- 32位
+[31位signed int] 0 
+- 64位
+[32位signed int][32位 padding(0)]
 
 
+如何区分SMI和指针：
+
+- 指针
+
+[31位signed int] 1
+对于指针，V8将始终将最后一位设置为1，如果该位为1，则表示我们正在处理指针。这也意味着在使用该指针之前，需要清除最后一位（将其设置为0），因为它被设置为1只是为了将该变量标记为指针。
+
+可以联想一下在调试d8的时候，%DebugPrint()的指针需要-1。
+
+###### HeapObject
+在堆中分配的任何东西
+大于31位(64位中的32位)的数是boxed 
+- HeapNumber
+
+每个HeapObject都包含一个map，其中包含对象的映射信息
+- 对象的大小信息
+- 实例属性/类型信息
+- 如何为GC迭代一个对象
+
+![](./img/11.png)
+
+##### The Heap
+- Generational Garbage Collector
+- Organization
+    - New Space
+    - Old Pointer Space
+    - Old Data Space
+    - Large Object Space
+    - Code Space
+    - Cell Space, Property Cell Space, Map Space 
+- Each space is divided into set of pages
+
+###### yong
+- Young Generation 
+    - Two-space collector 
+        - ToSpace, FromSpace 
+    - Fast allocation, fast collection
+- Scavenge
+    - Cheney's algorithm
+
+###### old
+- Old Generation
+- promoted" from new space 
+- Fast allocation, slow collection 
+- Mark-Sweep/ Mark-Compact 
+- Maintains marking bitmap 
+    - Quickly locate dead objects 
+    - Puts them into the freelist 
+- Memory usage reduction via Compact
 
 
+![](./img/12.png)
+
+###### ArrayBufferContents
+
+- ArrayBuffer was often abused to get a useful primitive in exploits
+    - Place arbitrary attacker-controlled data with exact size
+
+- Idea: Let's put the backing store in its own partition!
+    - Backing store (content) is allocated in Blink with PartitionAlloc
+    - JSArrayBuffer object is allocated in the V8 heap (with a pointer to the store)

@@ -111,6 +111,13 @@ void PersonInterfaceImpl::GetWeight(GetWeightCallback callback) {
 
 在漏洞利用之前，我们首先分析一下cat、dog、person的结构：
 
+首先在content::BeingCreatorInterfaceImpl::CreateCat处下断点，查看CatInterfaceImple大小。
+```
+   0x555558750d9e    mov    qword ptr [rbp - 0x30], 0   0x555558750da6    mov    edi, 0x40 ► 0x555558750dab    call   0x55555a241230 <0x55555a241230> => operator new
+```
+从这里可以得到CatInterfaceImple的大小为0x40。
+
+
 ```
 pwndbg> x/20gx 0x131643b24f400x131643b24f40:	0x000055555e515ae0 => vtable_table	0x0000131643ba55c0 => char *ptr;0x131643b24f50:	0x0000000000000030 => long length;	0x8000000000000040 => long capacity;0x131643b24f60:	0x0000000000000000 =>uint64_t age;	0x0000000000000000 => uint64_t weight;
 
