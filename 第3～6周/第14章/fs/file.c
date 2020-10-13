@@ -20,7 +20,7 @@ int32_t get_free_slot_in_global(void) {
    uint32_t fd_idx = 3;
    while (fd_idx < MAX_FILE_OPEN) {
       if (file_table[fd_idx].fd_inode == NULL) {
-          break;
+	 break;
       }
       fd_idx++;
    }
@@ -38,8 +38,8 @@ int32_t pcb_fd_install(int32_t globa_fd_idx) {
    uint8_t local_fd_idx = 3; // 跨过stdin,stdout,stderr
    while (local_fd_idx < MAX_FILES_OPEN_PER_PROC) {
       if (cur->fd_table[local_fd_idx] == -1) {	// -1表示free_slot,可用
-          cur->fd_table[local_fd_idx] = globa_fd_idx;
-          break;
+	 cur->fd_table[local_fd_idx] = globa_fd_idx;
+	 break;
       }
       local_fd_idx++;
    }

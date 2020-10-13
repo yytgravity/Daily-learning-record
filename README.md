@@ -180,7 +180,7 @@ int main(int argc, char* argv[])
 在进行判断时显然position1+1并没有指向end，所以他就会调用copy将指向chunk2的指针拷贝到position1，而且copy的实现本质上是一个浅拷贝，所以我们接下来的destory就会第一次free掉chunk2。
 之后第二次执行erase时，position1已经是最后一个元素，对其直接进行析构，此时chunk2就会再次被free。
 ![](img/5.png)
-![](img/6.jpg)
+![](img/6.png)
 
 - [x] 3、 erase存在的缺陷
 
