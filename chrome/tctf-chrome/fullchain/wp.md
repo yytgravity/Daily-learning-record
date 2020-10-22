@@ -179,7 +179,7 @@ pwndbg> x/30gx 0x000032959cc040100x32959cc04010:	0x2040c09c95320000	0x000000000
 - 由于我们的freed块都位于Slot span（忘记的可以看上面的superpage 布局）， 所以我们只要将末五位（低20位）置0就可以得到superpage的基地址。
 
 - PartitionPage大小是0x4000，我们取出泄漏指针的末四位 >> 14就可以得到PartitionPageIndex
-- PartitionPage基地址就是Index*0x4000 + superpage的基地址
+- 当前PartitionPage地址就是Index*0x4000 + superpage的基地址
 - MetadataArea的基地址就是 superpage的基地址 + 0x1000
 - 当前的MetadataArea地址就是 MetadataArea的基地址 + PartitionPageIndex * 0x20
 

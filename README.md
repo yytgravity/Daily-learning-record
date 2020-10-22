@@ -119,3 +119,86 @@
 
 
 </details>
+
+
+<details>
+<summary>Week7～12:文件格式fuzz</summary>
+
+### 入门
+
+通过开源软件学习如何使用winafl：
+
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/winafl-%E5%AE%9E%E6%88%98%E7%BB%83%E4%B9%A0)
+
+### frida学习（辅助harness编写）
+
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/frida)
+
+### gdi实战
+
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8Ffuzz/gdi)
+
+### pbk实战
+
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8Ffuzz/pbk)
+
+### 一些资料
+
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8Ffuzz)
+
+
+</details>
+
+<details>
+<summary>Week12.5: google ctf</summary>
+
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/google%20ctf%20wp/echo)
+
+</details>
+
+
+<details>
+<summary>Week13~14:cve复现</summary>
+
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/cve%E5%88%86%E6%9E%90)
+
+</details>
+
+<details>
+<summary>Week15～20: chrome </summary>
+
+### partition one： 初识mojo
+
+[传送门](https://github.com/yytgravity/Daily-learning-record/blob/master/chrome/plaid%202020%20mojo/mojo学习笔记.md)
+
+### partition two： plaid 2020 mojo：
+
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/chrome/plaid%202020%20mojo)
+
+### partition three： tctf chrome-RCE
+
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/chrome/tctf-chrome/RCE)
+
+### partition four：tctf chrome-SBX
+
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/chrome/tctf-chrome/sbx)
+
+### partition five：tctf chrome-fullchain
+
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/chrome/tctf-chrome/fullchain)
+
+### partition six: Google ctf-monochromatic
+
+
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/chrome/Google%202019)
+
+### partition seven: partitionalloc源码及利用分析
+
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/chrome/partitionalloc)
+
+
+### partition eight: partitionalloc源码即利用分析
+
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/chrome/oob)
+
+</details>
