@@ -23,7 +23,7 @@
  
 ### Question 3 ：绘制每个容器在内存里的对象存储图
 
-传送门: [为什么实现了uninitialized_xxx和copy/fill这样两组不同的函数](https://github.com/yytgravity/Daily-learning-record/blob/master/%E7%AC%AC1%EF%BD%9E2%E5%91%A8/%E6%80%9D%E8%80%83%E9%A2%98/%E7%BB%98%E5%88%B6%E6%AF%8F%E4%B8%AA%E5%AE%B9%E5%99%A8%E5%9C%A8%E5%86%85%E5%AD%98%E9%87%8C%E7%9A%84%E5%AF%B9%E8%B1%A1%E5%AD%98%E5%82%A8%E5%9B%BE.md)
+传送门: [绘制每个容器在内存里的对象存储图](https://github.com/yytgravity/Daily-learning-record/blob/master/%E7%AC%AC1%EF%BD%9E2%E5%91%A8/%E6%80%9D%E8%80%83%E9%A2%98/%E7%BB%98%E5%88%B6%E6%AF%8F%E4%B8%AA%E5%AE%B9%E5%99%A8%E5%9C%A8%E5%86%85%E5%AD%98%E9%87%8C%E7%9A%84%E5%AF%B9%E8%B1%A1%E5%AD%98%E5%82%A8%E5%9B%BE.md)
 
 ### Question 4 ：测试题目
 
@@ -31,7 +31,7 @@
 
 ### Question 5 ：学习一下师傅们的漏洞思路：
 
-传送门: [为什么实现了uninitialized_xxx和copy/fill这样两组不同的函数](https://github.com/yytgravity/Daily-learning-record/blob/master/%E7%AC%AC1%EF%BD%9E2%E5%91%A8/%E6%80%9D%E8%80%83%E9%A2%98/%E5%80%9F%E9%89%B4.md)
+传送门: [学习一下](https://github.com/yytgravity/Daily-learning-record/blob/master/%E7%AC%AC1%EF%BD%9E2%E5%91%A8/%E6%80%9D%E8%80%83%E9%A2%98/%E5%80%9F%E9%89%B4.md)
 
 
 </details>
