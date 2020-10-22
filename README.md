@@ -197,7 +197,7 @@
 [传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/chrome/partitionalloc)
 
 
-### partition eight: partitionalloc源码即利用分析
+### partition eight: oob类漏洞利用总结
 
 [传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/chrome/oob)
 
