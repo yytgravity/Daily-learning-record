@@ -51,7 +51,7 @@
 
 
 <details>
-<summary>Week3～6: 学习编写简单的内核</summary>
+<summary>Week3～9: 学习编写简单的内核</summary>
 
 > 整体梳理+准备部分: 
 
@@ -122,7 +122,7 @@
 
 
 <details>
-<summary>Week7～12:文件格式fuzz</summary>
+<summary>Week10～14:文件格式fuzz</summary>
 
 ### 入门
 
@@ -150,7 +150,7 @@
 </details>
 
 <details>
-<summary>Week12.5: google ctf</summary>
+<summary>Week14.5: google ctf</summary>
 
 [传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/google%20ctf%20wp/echo)
 
@@ -158,14 +158,14 @@
 
 
 <details>
-<summary>Week13~14:cve复现</summary>
+<summary>Week15~16:cve复现</summary>
 
 [传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/cve%E5%88%86%E6%9E%90)
 
 </details>
 
 <details>
-<summary>Week15～20: chrome </summary>
+<summary>Week17～21: chrome </summary>
 
 ### partition one： 初识mojo
 
