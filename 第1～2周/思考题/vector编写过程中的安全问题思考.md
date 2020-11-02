@@ -244,3 +244,39 @@ int main()
 ![](img/8.png)
 
 可以看到输出中调用的析构函数和要删除的对象并不匹配。
+
+- [x] 4、 迭代器失效
+
+```
+void zone_manager::deserialize( JsonIn &jsin )
+{
+    jsin.read( zones );
+    for( auto it = zones.begin(); it != zones.end(); ++it ) {
+        const zone_type_id zone_type = it->get_type();
+        if( !has_type( zone_type ) ) {
+            zones.erase( it );
+            debugmsg( "Invalid zone type: %s", zone_type.c_str() );
+        }
+    }
+}
+```
+
+前提条件：此时vector只包含一个元素。
+
+我们先来查看一下erase的代码：
+
+```
+ iterator erase(iterator __position) {
+            //如果position后面还有元素，需要拷贝;如果position是最后一个元素，则后面没有元素，直接destroy即可
+            if (__position + 1 != end()) {
+                copy(__position + 1, _M_finish, __position);
+            }
+            --_M_finish;
+            destroy(_M_finish);
+            return __position;
+        }
+```
+可以看到在destroy之后，会将finish左移，如下图：
+![](./img/13.png)
+
+这样就导致了it指向了end之后的地址，此时it != zones.end()恒成立，迭代器失效。
