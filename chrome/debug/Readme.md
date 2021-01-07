@@ -1,3 +1,28 @@
+### v8入门
+
+```
+fetch v8 && cd v8
+git checkout f7a1932ef928c190de32dd78246f75bd4ca8778b
+gclient sync
+
+#打入patch
+git apply 'path/to/tctf.diff'
+
+#配置
+tools/dev/v8gen.py x64.debug
+
+#编译
+ninja -C out.gn/x64.debug
+```
+
+编辑out.gn/x64.release/args.gn，加入以下内容，以支持job等命令打印对象。
+```
+v8_enable_backtrace = true
+v8_enable_disassembler = true
+v8_enable_object_print = true
+v8_enable_verify_heap = true
+```
+
 ### gdb
 起服务：
 ```

@@ -55,65 +55,65 @@
 
 > 整体梳理+准备部分: 
 
-[准备部分](https://github.com/yytgravity/Daily-learning-record/tree/master/%E7%AC%AC3%EF%BD%9E6%E5%91%A8/%E7%AC%AC1%E7%AB%A0)
+[准备部分](https://github.com/yytgravity/Daily-learning-record/tree/master/week3-6/%E7%AC%AC1%E7%AB%A0)
 
-[整体梳理](https://github.com/yytgravity/Daily-learning-record/tree/master/%E7%AC%AC3%EF%BD%9E6%E5%91%A8/%E6%95%B4%E4%BD%93%E6%A2%B3%E7%90%86)
+[整体梳理](https://github.com/yytgravity/Daily-learning-record/tree/master/week3-6/%E6%95%B4%E4%BD%93%E6%A2%B3%E7%90%86)
 
 > 初识mbr: 
 
-[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/%E7%AC%AC3%EF%BD%9E6%E5%91%A8/%E7%AC%AC2%E7%AB%A0)
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/week3-6/%E7%AC%AC2%E7%AB%A0)
 
 > 再探mbr: 
 
-[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/%E7%AC%AC3%EF%BD%9E6%E5%91%A8/%E7%AC%AC3%E7%AB%A0)
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/week3-6/%E7%AC%AC3%E7%AB%A0)
 
 > 保护模式: 
 
-[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/%E7%AC%AC3%EF%BD%9E6%E5%91%A8/%E7%AC%AC4%E7%AB%A0) 
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/week3-6/%E7%AC%AC4%E7%AB%A0) 
 
 > 内核参上！: 
 
-[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/%E7%AC%AC3%EF%BD%9E6%E5%91%A8/%E7%AC%AC5%E7%AB%A0)
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/week3-6/%E7%AC%AC5%E7%AB%A0)
 
 > 丰富内核: 
 
-[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/%E7%AC%AC3%EF%BD%9E6%E5%91%A8/%E7%AC%AC6%E7%AB%A0)
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/week3-6/%E7%AC%AC6%E7%AB%A0)
 
 > 中断: 
 
-[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/%E7%AC%AC3%EF%BD%9E6%E5%91%A8/%E7%AC%AC7%E7%AB%A0) 
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/week3-6/%E7%AC%AC7%E7%AB%A0) 
 
 > 内存管理: 
 
-[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/%E7%AC%AC3%EF%BD%9E6%E5%91%A8/%E7%AC%AC8%E7%AB%A0)
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/week3-6/%E7%AC%AC8%E7%AB%A0)
 
 > 线程: 
 
-[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/%E7%AC%AC3%EF%BD%9E6%E5%91%A8/%E7%AC%AC9%E7%AB%A0)
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/week3-6/%E7%AC%AC9%E7%AB%A0)
 
 > IO: 
 
-[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/%E7%AC%AC3%EF%BD%9E6%E5%91%A8/%E7%AC%AC10%E7%AB%A0)
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/week3-6/%E7%AC%AC10%E7%AB%A0)
 
 > 用户进程: 
 
-[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/%E7%AC%AC3%EF%BD%9E6%E5%91%A8/%E7%AC%AC11%E7%AB%A0)
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/week3-6/%E7%AC%AC11%E7%AB%A0)
 
 > 系统调用: 
 
-[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/%E7%AC%AC3%EF%BD%9E6%E5%91%A8/%E7%AC%AC12%E7%AB%A0)
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/week3-6/%E7%AC%AC12%E7%AB%A0)
 
 > 硬盘驱动: 
 
-[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/%E7%AC%AC3%EF%BD%9E6%E5%91%A8/%E7%AC%AC13%E7%AB%A0)
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/week3-6/%E7%AC%AC13%E7%AB%A0)
 
 > 文件系统: 
 
-[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/%E7%AC%AC3%EF%BD%9E6%E5%91%A8/%E7%AC%AC14%E7%AB%A0)
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/week3-6/%E7%AC%AC14%E7%AB%A0)
 
 > shell: 
 
-[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/%E7%AC%AC3%EF%BD%9E6%E5%91%A8/%E7%AC%AC15%E7%AB%A0)
+[传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/week3-6/%E7%AC%AC15%E7%AB%A0)
 
 参考的书籍： 《操作系统真象还原》 《csapp》
 
@@ -200,5 +200,13 @@
 ### partition eight: oob类漏洞利用总结
 
 [传送门](https://github.com/yytgravity/Daily-learning-record/tree/master/chrome/oob)
+
+
+</details>
+
+<details>
+<summary>接下来的一些计划</summary>
+
+开始挖漏洞了，陆续会在cve或chrome文件夹中更新新的一些记录
 
 </details>

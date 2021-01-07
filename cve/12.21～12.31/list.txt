@@ -1,0 +1,57 @@
+"782145": {
+        "cve_id": "CVE-2017-15428",
+        "title": "Out of bounds read in V8",
+        "m_version": "65",
+        "security_severity": "High",
+        "patch": [
+            "https://chromium.googlesource.com/v8/v8.git/+/55a98076827edac8eba775f8025df3749bcd8367"
+        ],
+        "fix_version": "62.0.3202.94",
+        "tag": "[string]",
+        "bug_url": "https://bugs.chromium.org/p/chromium/issues/detail?id=782145"
+    },
+
+
+
+    "752423": {
+        "cve_id": "CVE-2017-5122",
+        "title": "Out-of-bounds access in V8",
+        "m_version": "62",
+        "security_severity": "High",
+        "patch": [
+            "https://chromium.googlesource.com/v8/v8.git/+/c65792128c4e361c3a8021423b6f894ab8a401e1",
+            "https://chromium.googlesource.com/v8/v8.git/+/f6d5504f9869cbdc83a144f13df5fc2e95a1556f",
+            "https://chromium.googlesource.com/v8/v8.git/+/f0e07e4ba8d28e5d79f34b3ce47dcc10e87b39a4"
+        ],
+        "fix_version": "61.0.3163.100",
+        "tag": "[wasm]",
+        "bug_url": "https://bugs.chromium.org/p/chromium/issues/detail?id=752423"
+    },
+sakura  10:13:04
+    "759624": {
+        "cve_id": "CVE-2017-5116",
+        "title": "Type confusion in V8",
+        "m_version": "62",
+        "security_severity": "High",
+        "patch": [
+            "https://chromium.googlesource.com/v8/v8.git/+/542ff03c4e50273e55e25ee647a6e54e009da4dd"
+        ],
+        "fix_version": "61.0.3163.79",
+        "tag": "[wasm]",
+        "bug_url": "https://bugs.chromium.org/p/chromium/issues/detail?id=759624"
+    },
+
+
+
+    "798644": {
+        "cve_id": "CVE-2018-6064",
+        "title": "Type confusion in V8",
+        "m_version": "65",
+        "security_severity": "High",
+        "patch": [
+            "https://chromium.googlesource.com/v8/v8.git/+/be9c5fd982f53c937351eeca55ce668a101792b6"
+        ],
+        "fix_version": "65.0.3325.146",
+        "tag": "[elements]",
+        "bug_url": "https://bugs.chromium.org/p/chromium/issues/detail?id=798644"
+    },
