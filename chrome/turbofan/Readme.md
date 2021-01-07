@@ -509,6 +509,7 @@ Simplified lowering(简化降低后)：
 他会获取0（索引）和1（长度），重点在[1]处，这个函数的作用是消除checkbounds，根据代码可以得知，当索引的最大值小于长度的最小值时，就会在简化阶段将checkbounds消除。
 
 当然checkbounds如此方便的被攻击点，已经被修复了，现在有了新的利用方式：
+（建议搭配该ctf题一起食用：https://github.com/yytgravity/Daily-learning-record/blob/master/chrome/turbofan/%E6%95%B0%E7%BB%84%E8%B6%8A%E7%95%8C%E7%B1%BB/qwb%20growupjs.md）
 
 首先是修改后的VisitCheckBounds函数：
 
@@ -589,6 +590,171 @@ void InstructionSelector::VisitUnreachable(Node* node) {
   Emit(kArchDebugBreak, g.NoOutput());
 }
 ```
+
+我们根据图来观察一下变化
+
+code：
+```
+var opt_me = () => {    let arr = [1,2,3,4];    let badly_typed = 0;    let idx = badly_typed * 5;    return arr[idx];  };  opt_me();  %OptimizeFunctionOnNextCall(opt_me);  opt_me();
+```
+
+![](./img/21.png)
+
+![](./img/22.png)
+
+![](./img/23.png)
+
+最终CheckedUint32Bounds被Uint32LessThan等多个节点所代替，接着在Late optimization中还会做进一步的优化（MachineOperatorReducer and DeadCodeElimination）：
+
+```
+// Perform constant folding and strength reduction on machine operators.
+Reduction MachineOperatorReducer::Reduce(Node* node) {
+  switch (node->opcode()) {
+// [...]
+      case IrOpcode::kUint32LessThan: {
+      Uint32BinopMatcher m(node);
+      if (m.left().Is(kMaxUInt32)) return ReplaceBool(false);  // M < x => false
+      if (m.right().Is(0)) return ReplaceBool(false);          // x < 0 => false
+      if (m.IsFoldable()) {                                    // K < K => K
+        return ReplaceBool(m.left().Value() < m.right().Value());
+      }
+      if (m.LeftEqualsRight()) return ReplaceBool(false);  // x < x => false
+      if (m.left().IsWord32Sar() && m.right().HasValue()) {
+        Int32BinopMatcher mleft(m.left().node());
+        if (mleft.right().HasValue()) {
+          // (x >> K) < C => x < (C << K)
+          // when C < (M >> K)
+          const uint32_t c = m.right().Value();
+          const uint32_t k = mleft.right().Value() & 0x1F;
+          if (c < static_cast<uint32_t>(kMaxInt >> k)) {
+            node->ReplaceInput(0, mleft.left().node());
+            node->ReplaceInput(1, Uint32Constant(c << k));
+            return Changed(node);
+          }
+          // TODO(turbofan): else the comparison is always true.
+        }
+      }
+      break;
+    }
+// [...]
+```
+
+根据代码可以得知Uint32LessThan会被优化向两个方向：True -> Int32Constant 或 False -> removed by the dead code elimination。
+
+如果成功进入到true分支，则会消除掉check，这样的话我们就可以自由的oob了，（其实这里还有一个检测，我们放到下面说）。
+
+### 小结
+
+- arr[good_idx] leads to the creation of a CheckBounds node in the early phases
+- during "simplified lowering", it gets replaced by an aborting CheckedUint32Bounds
+- The CheckedUint32Bounds gets replaced by several nodes during "effect linearization" : Uint32LessThan and Unreachable
+- Uint32LessThan is constant folded during the "Late Optimization" phase
+- The Unreachable node is removed during dead code elimination of the "Late Optimization" phase
+- Only a simple Load remains during the final scheduling
+- Generated assembly is a simple mov instruction without bound checking
+
+
+一道ctf例题：
+https://github.com/yytgravity/Daily-learning-record/blob/master/chrome/turbofan/%E6%95%B0%E7%BB%84%E8%B6%8A%E7%95%8C%E7%B1%BB/qwb%20growupjs.md
+
+如果我们根据上面的分析，直接写出如下代码：
+```
+function test() {
+    let arr = [1.1, 2.2, 3.3, 4.4];
+    let idx = 4; <- [1]
+    return arr[idx];
+}
+for (i = 0; i < 10000; i++){
+    test();
+}
+```
+很明显[1]处数组越界，但是这个test是无法成功的，因为JSNativeContextSpecialization::BuildElementAccess函数中有一个mode需要我们注意：load_mode=LOAD_IGNORE_OUT_OF_BOUNDS
+他会在array的index超出了array的length时出现（可以说得上是数组越界的老朋友了）接着就需要对index进行check，看是否超出了Smi::kMaxValue，引入了一个new CheckBounds节点。
+
+```
+// Check if we might need to grow the {elements} backing store.
+if (keyed_mode.IsStore() && IsGrowStoreMode(keyed_mode.store_mode())) {
+  // For growing stores we validate the {index} below.
+} else if (keyed_mode.IsLoad() &&
+           keyed_mode.load_mode() == LOAD_IGNORE_OUT_OF_BOUNDS &&
+           CanTreatHoleAsUndefined(receiver_maps)) {
+  // Check that the {index} is a valid array index, we do the actual
+  // bounds check below and just skip the store below if it's out of
+  // bounds for the {receiver}.
+  index = effect = graph()->NewNode(
+      simplified()->CheckBounds(VectorSlotPair()), index,
+      jsgraph()->Constant(Smi::kMaxValue), effect, control);
+} else {
+  // Check that the {index} is in the valid range for the {receiver}.
+  index = effect =
+      graph()->NewNode(simplified()->CheckBounds(VectorSlotPair()), index,
+                       length, effect, control);
+}
+```
+然后还需要对index进行实际的check，也就是比较index是否小于array length，引入了一个NumberLessThan节点。
+```
+// Check if we can return undefined for out-of-bounds loads.
+      if (keyed_mode.load_mode() == LOAD_IGNORE_OUT_OF_BOUNDS &&
+          CanTreatHoleAsUndefined(receiver_maps)) {
+        Node* check =
+            graph()->NewNode(simplified()->NumberLessThan(), index, length);
+        Node* branch = graph()->NewNode(
+            common()->Branch(BranchHint::kTrue,
+                             IsSafetyCheck::kCriticalSafetyCheck),
+            check, control);
+
+        Node* if_true = graph()->NewNode(common()->IfTrue(), branch);
+        Node* etrue = effect;
+        Node* vtrue;
+        {
+          // Perform the actual load
+          vtrue = etrue =
+              graph()->NewNode(simplified()->LoadElement(element_access),
+                               elements, index, etrue, if_true);
+```
+然后这个节点在LoadElimination进行TyperNarrowingReducer的时候。
+```
+switch (node->opcode()) {
+  case IrOpcode::kNumberLessThan: {
+    // TODO(turbofan) Reuse the logic from typer.cc (by integrating relational
+    // comparisons with the operation typer).
+    Type left_type = NodeProperties::GetType(node->InputAt(0));
+    Type right_type = NodeProperties::GetType(node->InputAt(1));
+    if (left_type.Is(Type::PlainNumber()) &&
+        right_type.Is(Type::PlainNumber())) {
+      if (left_type.Max() < right_type.Min()) {
+        new_type = op_typer_.singleton_true();
+      } else if (left_type.Min() >= right_type.Max()) {
+        new_type = op_typer_.singleton_false();
+      }
+    }
+    break;
+  }
+```
+重点！：left_type（index），right_type（array length），我们只有在这里绕过这个判断else if (left_type.Min() >= right_type.Max())才能自由的oob。
+否则kNumberLessThan的类型会被更新成false，然后在ConstantFoldingReducer时候
+```
+Reduction ConstantFoldingReducer::Reduce(Node* node) {
+  DisallowHeapAccess no_heap_access;
+  // Check if the output type is a singleton.  In that case we already know the
+  // result value and can simply replace the node if it's eliminable.
+  if (!NodeProperties::IsConstant(node) && NodeProperties::IsTyped(node) &&
+      node->op()->HasProperty(Operator::kEliminatable)) {
+    // TODO(v8:5303): We must not eliminate FinishRegion here. This special
+    // case can be removed once we have separate operators for value and
+    // effect regions.
+    if (node->opcode() == IrOpcode::kFinishRegion) return NoChange();
+    // We can only constant-fold nodes here, that are known to not cause any
+    // side-effect, may it be a JavaScript observable side-effect or a possible
+    // eager deoptimization exit (i.e. {node} has an operator that doesn't have
+    // the Operator::kNoDeopt property).
+    Type upper = NodeProperties::GetType(node);
+    if (!upper.IsNone()) {
+      Node* replacement = nullptr;
+      if (upper.IsHeapConstant()) {
+        replacement = jsgraph()->Constant(upper.AsHeapConstant()->Ref());
+```
+被直接折叠成了false节点。
 
 
 
