@@ -6,6 +6,8 @@ https://docs.google.com/presentation/d/1sOEF4MlF7LeO7uq-uThJSulJlTh--wgLeaVibsbb
 
 https://darksi.de/d.sea-of-nodes/
 
+https://doar-e.github.io/blog/2019/05/09/circumventing-chromes-hardening-of-typer-bugs/
+
 
 ## 基础部分
 
@@ -755,6 +757,8 @@ Reduction ConstantFoldingReducer::Reduce(Node* node) {
         replacement = jsgraph()->Constant(upper.AsHeapConstant()->Ref());
 ```
 被直接折叠成了false节点。
+
+
 
 
 
