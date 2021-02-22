@@ -285,6 +285,9 @@ trampoline_fmt_64
 
 ### afl-fuzz
 
+![](./img/1.jpg)
+
+
 https://www.anquanke.com/post/id/213431#h2-2
 
 https://rk700.github.io/2017/12/28/afl-internals/
