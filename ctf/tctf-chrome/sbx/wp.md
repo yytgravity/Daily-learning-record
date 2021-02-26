@@ -14,7 +14,7 @@ public:
     }
     ~A()
     {
-        printf("A析构\n");
+#         printf("A析构\n");
     }
     
 };

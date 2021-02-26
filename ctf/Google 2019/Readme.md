@@ -74,7 +74,7 @@ function FoodInterfaceImpl() {
 ### 漏洞分析
 首先先简述一下c++接口实现：
 
-- c++的接口实现主要基于回调，接口实现的方法不会通过return语句返回值。相反，它的工作方式是方法期望一个回调作为一个参数(例如PersonInterfaceImpl::CookAndEat中的CookAndEatCallback callback参数)。调用这个回调通知该方法完成了它的执行，.run()的参数作为返回值（返回值数目大于等于1）。
+- chromium的接口实现主要基于回调，接口实现的方法不会通过return语句返回值。相反，它的工作方式是方法期望一个回调作为一个参数(例如PersonInterfaceImpl::CookAndEat中的CookAndEatCallback callback参数)。调用这个回调通知该方法完成了它的执行，.run()的参数作为返回值（返回值数目大于等于1）。
 
 上代码：
 ```
