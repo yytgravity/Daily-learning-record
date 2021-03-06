@@ -643,7 +643,7 @@ Reduction MachineOperatorReducer::Reduce(Node* node) {
 
 根据代码可以得知Uint32LessThan会被优化向两个方向：True -> Int32Constant 或 False -> removed by the dead code elimination。
 
-如果成功进入到true分支，则会消除掉check，这样的话我们就可以自由的oob了，（其实这里还有一个检测，我们放到下面说）。
+如果成功进入到true分支，则会消除掉check，这样的话我们就可以自由的oob了
 
 ### 小结
 
