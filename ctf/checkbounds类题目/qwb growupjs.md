@@ -127,6 +127,9 @@ Node* EffectControlLinearizer::LowerCheckedUint32Bounds(Node* node,
 
 ![](./img/3.png)
 
+之后LessThan将会根据结果生成一个LoadElement或多个Unreachable节点。
+
+
 但是我们不能直接构造数组越界（如将let idx = 4;）
 
 原因如下：
@@ -287,5 +290,20 @@ Type OperationTyper::CheckBounds(Type index, Type length) {
 此时的index和checkbounds都被分析为了Range(0,4)。
 
 之后再次来到left_type.Min() >= right_type.Max())时，由于left为index Range（0，4），right为length Range（4，4），这样就不会满足判断，就可以绕过kNumberLessThan从而实现数组越界。
+
+上面的方法是通过在LoadElimination阶段使idx成为非确定的range来绕过Uint32LessThan。
+
+我们还可以从逃逸分析来入手绕过：
+
+```
+function opt(){
+ let arr = [1.1, 2, 3, 5];
+
+ let o = {x: 4};
+ return arr[o.x];
+}
+```
+因为逃逸分析运行在LoadElimination和MachineOperatorReducer之后，所以我们可以将一个常数放入未逃逸的对象中，以避免常数折叠。
+
 
 之后的exp利用就按照常规写法写即可。

