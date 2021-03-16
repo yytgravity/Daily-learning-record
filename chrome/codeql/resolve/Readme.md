@@ -28,6 +28,10 @@ Resolve重入的漏洞，老面孔了。
 ```
 import cpp
 
+
+//getUnderlyingType：在解析typedef后获取此表达式的类型。
+//getAnAssignedValue：获取在程序中某处分配给该变量的表达式。
+//isCompilerGenerated：如果此函数由编译器生成，则成立。
 class Iterator extends Variable {
     Iterator() {
         this.getUnderlyingType().getName().matches("%iterator%")
@@ -45,27 +49,10 @@ class Iterator extends Variable {
     }
 }
 
-
-class DispatchEventCall extends FunctionCall{
-    predicate containedBy(Stmt other) {
-        other.getASuccessor*() = this
-        and other.getAChild*() = this
-    }
-
-    DispatchEventCall(){
-        // 直接调用DispatchEvent
-        (this.getTarget().(MemberFunction).getName().matches("DispatchEvent")
-        and this.getTarget().(MemberFunction).getEnclosingElement().(Class).getName().matches("EventTarget"))
-        // 间接调用DispatchEvent
-        or exists (DispatchEventCall dc | 
-            dc.containedBy(this.getTarget().getBlock()) 
-            or 
-            // 用于被重载的虚函数调用
-            dc.containedBy(this.getTarget().(MemberFunction).getAnOverridingFunction().getBlock())
-            )
-    }
-}
-
+//getASuccessor：获取此指令的直接后继。
+//getAChild：获取此元素的直接子元素。
+//getEnclosingElement：获取封闭此对象的最近的Element。
+//getAnOverridingFunction：获取直接重写的函数。
 class ResolveCall extends FunctionCall{
     predicate containedBy(Stmt other) {
         other.getASuccessor*() = this
@@ -113,18 +100,6 @@ class ResolveCall extends FunctionCall{
     }
 } 
 
-// 因为操作符->经常在chrome里被重载，在这种情况下，此通用方法将跳过被重载的->，找到真正的限定符
-Expr getQualifer(Expr fc){
-    exists(Expr qualifer | 
-    qualifer = fc.(FunctionCall).getQualifier() or 
-    qualifer = fc.(FieldAccess).getQualifier() | 
-    if qualifer.(FunctionCall).getTarget().hasName("operator->") then
-        result = getQualifer(qualifer)
-    else
-        result = qualifer
-    )
-}
-
 //宽松的约束条件，首先找到一组ResolveCall，再找到一组Iterator，如果ResolveCall和Iterator在同一scope里，即认为这是一个可能使迭代器实效的顶层调用
 class TopResolveCall extends ResolveCall{
     Iterator iter;
@@ -135,76 +110,10 @@ class TopResolveCall extends ResolveCall{
         result = iter
     }
 }
-
-//宽松的约束条件，首先找到一组DispatchEventCall，再找到一组Iterator，如果DispatchEventCall和Iterator在同一scope里，即认为这是一个可能使迭代器实效的顶层调用
-class TopDispatchEventCall extends DispatchEventCall{
-    Iterator iter;
-    TopDispatchEventCall(){
-        this.containedBy(iter.getParentScope())
-    }
-    Iterator iterator(){
-        result = iter
-    }
-}
-
-// https://en.cppreference.com/w/cpp/language/range-for
-// 保守的DispatchEventCall顶层调用，基于逻辑如下,容易漏掉很多东西
-// {
-//     auto && __range = range_expression ;
-//     for (auto __begin = begin_expr, __end = end_expr; __begin != __end; ++__begin) {
-//          range_declaration = *__begin;
-//          loop_statement
-//     }
-// }
-// getQualifer(this)找到range_declaration的access，然后找到它的target，即range_declaration
-// range_declaration的AssignedValue是call `opertor *`，取其getQualifer得到__begin的VariableAccess
-// 再取其getTarget得到__begin，这就是我们之前通过Iterator得到的一组iter之一
-class ConserveTopDispatchEventCall extends DispatchEventCall{
-    Iterator iter;
-    ConserveTopDispatchEventCall(){
-        getQualifer(this).(VariableAccess).getTarget().getAnAssignedValue().(FunctionCall).getQualifier().(VariableAccess).getTarget() = iter
-    }
-    Iterator iterator(){
-        result = iter
-    }
-}
-
-// 测试TopDispatchEventCall
-// from TopDispatchEventCall ec
-// where ec.getLocation().toString().matches("%xr%")
-// select ec, ec.iterator(), ec.iterator().iterated()
-
-// from ConserveTopDispatchEventCall ec
-// where ec.getLocation().toString().matches("%xr%")
-// select ec, ec.iterator(), ec.iterator().iterated()
-
-// 为了更好的进行分析，构建整条调用路径，示例如下:
-predicate calls(Function caller, Function callee){
-    callee.getACallToThisFunction().getEnclosingFunction() = caller
-}
-
-predicate virtuallCalls(Function a, Function b){
-    a.calls(b) or
-    a.calls(b.(MemberFunction).getAnOverriddenFunction+())
-}
-
-// class DispatchEvent extends Function{
-//     DispatchEvent(){
-//         this.getName().matches("DispatchEvent") and
-//         this.getEnclosingElement().(Class).getName().matches("EventTarget")
-//     }
-// }
-// class FocusedFrameChanged extends Function{
-//     FocusedFrameChanged(){
-//         this.getName().matches("FocusedFrameChanged") and
-//         this.getEnclosingElement().(Class).getName().matches("XRSystem")
-//     }
-// }
-
-// from  FocusedFrameChanged start, DispatchEvent end, Function f
-// where virtuallCalls*(start, f) and virtuallCalls*(f, end)
-// select f
 ```
+
+
+
 
 ```
 import cpp
