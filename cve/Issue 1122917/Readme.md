@@ -7,7 +7,7 @@ DirectSocketsServiceImpl::DirectSocketsServiceImpl(RenderFrameHost& frame_host)
     : frame_host_(&frame_host) {}
 ```
 在DirectSocketsServiceImpl中保存了RenderFrameHost的实际指针。
-
+Cancel Changes
 ``` c++
 // static
 void DirectSocketsServiceImpl::CreateForFrame(
@@ -20,7 +20,7 @@ void DirectSocketsServiceImpl::CreateForFrame(
 }
 ```
 
-在CreateForFrame函数中通过MakeSelfOwnedReceiver函数来创建一个self-owned的receiver，这个算是老朋友了DirectSocketsServiceImpl没有继承自WebObserver等来观察renderframehost的生命周期，这就导致了他的生命周期可以长过renderframehost。
+在CreateForFrame函数中通过MakeSelfOwnedReceiver函数来创建一个self-owned的receiver这个算是老朋友了，DirectSocketsServiceImpl没有继承自WebObserver等来观察renderframehost的生命周期，这就导致了他的生命周期可以长过renderframehost。
 
 可以通过free iframe来释放掉对应的render_frame_host，而此时DirectSocketsServiceImpl依旧存在。（poc依旧是之前的阻塞器写法）
 
