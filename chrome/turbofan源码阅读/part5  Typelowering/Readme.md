@@ -1,3 +1,282 @@
+## 一些补充
+
+鉴于下面的内容大量涉及到了node相关的内容，虽然之前有写过，这里还是再简单提一嘴：
+以下面的内容为例：
+```
+const Operator* JSOperatorBuilder::StackCheck(StackCheckKind kind) {
+  return zone()->New<Operator1<StackCheckKind>>(  // --
+      IrOpcode::kJSStackCheck,                    // opcode
+      Operator::kNoWrite,                         // properties
+      "JSStackCheck",                             // name
+      0, // value_in 
+      1, // effect_in 
+      1, // control_in 
+      0, // value_out 
+      1, // effect_out 
+      2, // control_out
+      kind);                                      // parameter
+}
+
+
+Node* BytecodeGraphBuilder::MakeNode(const Operator* op, int value_input_count,
+                                     Node* const* value_inputs,
+                                     bool incomplete) {
+  DCHECK_EQ(op->ValueInputCount(), value_input_count);
+
+  bool has_context = OperatorProperties::HasContextInput(op);
+  bool has_frame_state = OperatorProperties::HasFrameStateInput(op);
+  bool has_control = op->ControlInputCount() == 1;
+  bool has_effect = op->EffectInputCount() == 1;
+
+  DCHECK_LT(op->ControlInputCount(), 2);
+  DCHECK_LT(op->EffectInputCount(), 2);
+
+  Node* result = nullptr;
+  if (!has_context && !has_frame_state && !has_control && !has_effect) { //判断是否需要input结点
+    result = graph()->NewNode(op, value_input_count, value_inputs, incomplete);
+  } else {
+  //如果不需要任何关联结点
+    bool inside_handler = !exception_handlers_.empty();
+    int input_count_with_deps = value_input_count;
+    if (has_context) ++input_count_with_deps;
+    if (has_frame_state) ++input_count_with_deps;
+    if (has_control) ++input_count_with_deps;
+    if (has_effect) ++input_count_with_deps;
+    Node** buffer = EnsureInputBufferSize(input_count_with_deps); //申请空间来存储创建结点需要的input结点。
+    if (value_input_count > 0) {
+    //如果存在value input结点，则插入到buffer的开头处。
+      base::Memcpy(buffer, value_inputs,
+                   kSystemPointerSize * value_input_count);
+    }
+    Node** current_input = buffer + value_input_count;
+    //value input之后是context、frame_state、effect和control结点
+    if (has_context) {
+    //判断是否需要精确的context，如果需要则使用上面创建的环境env中的context结点，否则创建一个新context结点。
+      *current_input++ = OperatorProperties::NeedsExactContext(op)
+                             ? environment()->Context()
+                             : native_context_node();
+    }
+    if (has_frame_state) {
+      // The frame state will be inserted later. Here we misuse the {Dead} node
+      // as a sentinel to be later overwritten with the real frame state by the
+      // calls to {PrepareFrameState} within individual visitor methods.
+      //我们在这里用Dead结点来占位，之后在各个访问者的方法中调用PrepareFrameState去覆盖实际的frame state。
+      *current_input++ = jsgraph()->Dead();
+    }
+    if (has_effect) {
+    //effect直接使用env中的effect结点
+      *current_input++ = environment()->GetEffectDependency();
+    }
+    if (has_control) {
+    //control直接使用env中的control结点
+      *current_input++ = environment()->GetControlDependency();
+    }
+    result = graph()->NewNode(op, input_count_with_deps, buffer, incomplete); //创建目标结点
+    // Update the current control dependency for control-producing nodes.
+    //将上面添加了Dependency标记的control和effect结点替换为环境中的control和effect结点。
+    if (result->op()->ControlOutputCount() > 0) {
+      environment()->UpdateControlDependency(result);
+    }
+    // Update the current effect dependency for effect-producing nodes.
+    if (result->op()->EffectOutputCount() > 0) {
+      environment()->UpdateEffectDependency(result);
+    }
+    
+    //throw结点的处理先略过
+    ....
+    
+    // Ensure checkpoints are created after operations with side-effects.
+    //如果存在effect结点，并且type不是kNoWrite，表示存在副作用，需要标记添加checkpoint结点。
+    if (has_effect && !result->op()->HasProperty(Operator::kNoWrite)) {
+      mark_as_needing_eager_checkpoint(true);
+    }
+  }
+
+  return result;
+}
+```
+makenode主要先判断节点是否需要context、frame_ state、control input、effect input等输入，根据判断结果布置对应的input。
+
+这里重点说一下context和frame_ state，其他的主要都是根据new时的定义来判断的。
+```
+  bool OperatorProperties::HasContextInput(const Operator* op) {
+  IrOpcode::Value opcode = static_cast<IrOpcode::Value>(op->opcode());
+  return IrOpcode::IsJsOpcode(opcode);
+}
+  
+  ----------------------------
+  
+  // Returns true if opcode for JavaScript operator.
+  static bool IsJsOpcode(Value value) {
+    return kJSEqual <= value && value <= kJSDebugger;
+  }
+```
+这里主要是通过查看opcode的范围来进行判断的:
+
+https://source.chromium.org/chromium/chromium/src/+/master:v8/src/compiler/opcodes.h;l=237?q=JSDebugger&ss=chromium%2Fchromium%2Fsrc
+
+具体的范围可以看上面链接里的list。
+举个例子：
+```
+// Opcodes for control operators.
+#define CONTROL_OP_LIST(V)           \
+  V(Start)                           \
+  V(Loop)                            \
+  V(Branch)                          \
+  V(Switch)                          \
+  V(IfTrue)                          \
+  V(IfFalse)                         \
+  V(IfSuccess)                       \
+  V(IfException)                     \
+  V(IfValue)                         \
+  V(IfDefault)                       \
+  V(Merge)                           \
+  V(Deoptimize)                      \
+  V(DeoptimizeIf)                    \
+  V(DeoptimizeUnless)                \
+  V(DynamicCheckMapsWithDeoptUnless) \
+  V(TrapIf)                          \
+  V(TrapUnless)                      \
+  V(Return)                          \
+  V(TailCall)                        \
+  V(Terminate)                       \
+  V(Throw)                           \
+  V(End)
+```
+像这些control opcode就没有context。
+
+FrameState就主要是通过switch判断了。
+```
+// static
+bool OperatorProperties::HasFrameStateInput(const Operator* op) {
+  switch (op->opcode()) {
+    case IrOpcode::kCheckpoint:
+    case IrOpcode::kFrameState:
+      return true;
+    case IrOpcode::kJSCallRuntime: {
+      const CallRuntimeParameters& p = CallRuntimeParametersOf(op);
+      return Linkage::NeedsFrameStateInput(p.id());
+    }
+
+    // Strict equality cannot lazily deoptimize.
+    case IrOpcode::kJSStrictEqual:
+      return false;
+
+    // Generator creation cannot call back into arbitrary JavaScript.
+    case IrOpcode::kJSCreateGeneratorObject:
+      return false;
+
+    // Binary operations
+    case IrOpcode::kJSAdd:
+    case IrOpcode::kJSSubtract:
+    case IrOpcode::kJSMultiply:
+    case IrOpcode::kJSDivide:
+    case IrOpcode::kJSModulus:
+    case IrOpcode::kJSExponentiate:
+
+    // Bitwise operations
+    case IrOpcode::kJSBitwiseOr:
+    case IrOpcode::kJSBitwiseXor:
+    case IrOpcode::kJSBitwiseAnd:
+
+    // Shift operations
+    case IrOpcode::kJSShiftLeft:
+    case IrOpcode::kJSShiftRight:
+    case IrOpcode::kJSShiftRightLogical:
+
+    // Compare operations
+    case IrOpcode::kJSEqual:
+    case IrOpcode::kJSGreaterThan:
+    case IrOpcode::kJSGreaterThanOrEqual:
+    case IrOpcode::kJSLessThan:
+    case IrOpcode::kJSLessThanOrEqual:
+    case IrOpcode::kJSHasProperty:
+    case IrOpcode::kJSHasInPrototypeChain:
+    case IrOpcode::kJSInstanceOf:
+    case IrOpcode::kJSOrdinaryHasInstance:
+
+    // Object operations
+    case IrOpcode::kJSCreate:
+    case IrOpcode::kJSCreateArguments:
+    case IrOpcode::kJSCreateArray:
+    case IrOpcode::kJSCreateTypedArray:
+    case IrOpcode::kJSCreateLiteralArray:
+    case IrOpcode::kJSCreateArrayFromIterable:
+    case IrOpcode::kJSCreateLiteralObject:
+    case IrOpcode::kJSCreateLiteralRegExp:
+    case IrOpcode::kJSCreateObject:
+    case IrOpcode::kJSCloneObject:
+
+    // Property access operations
+    case IrOpcode::kJSDeleteProperty:
+    case IrOpcode::kJSLoadGlobal:
+    case IrOpcode::kJSLoadNamed:
+    case IrOpcode::kJSLoadNamedFromSuper:
+    case IrOpcode::kJSLoadProperty:
+    case IrOpcode::kJSStoreDataPropertyInLiteral:
+    case IrOpcode::kJSStoreInArrayLiteral:
+    case IrOpcode::kJSStoreGlobal:
+    case IrOpcode::kJSStoreNamed:
+    case IrOpcode::kJSStoreNamedOwn:
+    case IrOpcode::kJSStoreProperty:
+
+    // Conversions
+    case IrOpcode::kJSToLength:
+    case IrOpcode::kJSToName:
+    case IrOpcode::kJSToNumber:
+    case IrOpcode::kJSToNumberConvertBigInt:
+    case IrOpcode::kJSToNumeric:
+    case IrOpcode::kJSToObject:
+    case IrOpcode::kJSToString:
+    case IrOpcode::kJSParseInt:
+
+    // Call operations
+    case IrOpcode::kJSConstructForwardVarargs:
+    case IrOpcode::kJSConstruct:
+    case IrOpcode::kJSConstructWithArrayLike:
+    case IrOpcode::kJSConstructWithSpread:
+    case IrOpcode::kJSCallForwardVarargs:
+    case IrOpcode::kJSCall:
+    case IrOpcode::kJSCallWithArrayLike:
+    case IrOpcode::kJSCallWithSpread:
+#if V8_ENABLE_WEBASSEMBLY
+    case IrOpcode::kJSWasmCall:
+#endif  // V8_ENABLE_WEBASSEMBLY
+
+    // Misc operations
+    case IrOpcode::kJSAsyncFunctionEnter:
+    case IrOpcode::kJSAsyncFunctionReject:
+    case IrOpcode::kJSAsyncFunctionResolve:
+    case IrOpcode::kJSForInEnumerate:
+    case IrOpcode::kJSForInNext:
+    case IrOpcode::kJSStackCheck:
+    case IrOpcode::kJSDebugger:
+    case IrOpcode::kJSGetSuperConstructor:
+    case IrOpcode::kJSBitwiseNot:
+    case IrOpcode::kJSDecrement:
+    case IrOpcode::kJSIncrement:
+    case IrOpcode::kJSNegate:
+    case IrOpcode::kJSPromiseResolve:
+    case IrOpcode::kJSRejectPromise:
+    case IrOpcode::kJSResolvePromise:
+    case IrOpcode::kJSPerformPromiseThen:
+    case IrOpcode::kJSObjectIsArray:
+    case IrOpcode::kJSRegExpTest:
+    case IrOpcode::kJSGetImportMeta:
+
+    // Iterator protocol operations
+    case IrOpcode::kJSGetIterator:
+      return true;
+
+    default:
+      return false;
+  }
+}
+```
+
+综上所述，node的inputs顺序为：
+[ values, context, frame state, effects, control ]
+
 ## Type lowering
 
 TyperPhase之后紧接着就是TypedLoweringPhase
@@ -140,7 +419,6 @@ Node* TryGetConstant(JSGraph* jsgraph, Node* node) {
   return result;
 }
 ```
-
 
 ####  typed_lowering
 
@@ -740,6 +1018,30 @@ bool Node::OwnedBy(Node const* owner) const {
   return first_use_ != nullptr;
 }
 ```
+
+下面补充一点细节：
+```
+  template <size_t kInputCount>
+  struct MergeOperator final : public Operator {
+    MergeOperator()
+        : Operator(                                  // --
+              IrOpcode::kMerge, Operator::kKontrol,  // opcode
+              "Merge",                               // name
+               0, // value_in 
+               0, // effect_in 
+               kInputCount, // control_in 
+               0, // value_out 
+               0, // effect_out 
+               1, // control_out
+              ) {}         
+  };
+```
+可以看到他没有value input，并且由于merge是一个control结点，所以他没有context和framestate结点，所以此时它的input前kInputCount个结点都是control结点（此时为2），这也就是
+Node* if_true = node->InputAt(0); //获取node的第一个input
+Node* if_false = node->InputAt(1);  //获取node的第二个input
+这样可以获得control结点的原因。
+
+
 
 
 
