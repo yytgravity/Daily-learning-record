@@ -14,13 +14,13 @@ function trigger() {
       }
   }
 
-  var value = Math.max(i, 1024);
-  value = -value;
-  value = Math.max(value, -1025);
-  value = -value;
-  value -= 1022;
-  value >>= 1; // *** 3 ***
-  value += 10; //
+  var value = Math.max(i, 1024); //实际：NaN ，推测值：(1024,inf)
+  value = -value; //实际值：NaN，推测值：(-inf,-1024)
+  value = Math.max(value, -1025);//实际值：-2147483648，推测值：(-1025,-1024)
+  value = -value;//实际值：-2147483648，推测值：(1024,1025)
+  value -= 1022;//实际值：-2147484670，推测值：(2,3)
+  value >>= 1; //实际值：1073741313，推测值：(1,1)
+  value += 10; //实际值：1073741323，推测值：(11,11)
   var array = Array(value);
   array[0] = 1.1;
   return array;
