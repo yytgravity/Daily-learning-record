@@ -1,7 +1,14 @@
 
+
 ### poc:
 ```
-function foo(b){    let y = (new Date(42)).getMilliseconds();    let x = -1;    if(b) x = 0xFFFF_FFFF;    let c = Math.max(0, x , -1);	  return -1 < c;}
+function foo(b){
+    let y = (new Date(42)).getMilliseconds();
+    let x = -1;
+    if(b) x = 0xFFFF_FFFF;
+    let c = Math.max(0, x , -1);
+	  return -1 < c;
+}
 
 console.log(foo(true));
 console.log(foo(false));
@@ -34,7 +41,12 @@ console.log(foo(true));
 ```
 
 ```
-void Run(SimplifiedLowering* lowering) {    GenerateTraversal();    RunPropagatePhase();    RunRetypePhase();    RunLowerPhase(lowering);  }
+void Run(SimplifiedLowering* lowering) {
+    GenerateTraversal();
+    RunPropagatePhase();
+    RunRetypePhase();
+    RunLowerPhase(lowering);
+  }
 ```
 对于这个漏洞来说主要要分析第三个阶段，也就是lower阶段，在该阶段主要会进行下面的出操作：
 - 将节点本身lower到更具体的节点(通过DeferReplacement)
@@ -51,15 +63,42 @@ VisitNode->VisitBinop->ProcessInput->GetRepresentationFor
 在GetRepresentationFor函数中触发漏洞代码添加TruncateInt64ToInt32()
 
 具体代码：
+<<<<<<< HEAD
 
 ```
-      case IrOpcode::kSpeculativeNumberLessThan:      case IrOpcode::kSpeculativeNumberLessThanOrEqual:      case IrOpcode::kSpeculativeNumberEqual: {        
+      case IrOpcode::kSpeculativeNumberLessThan:
+      case IrOpcode::kSpeculativeNumberLessThanOrEqual:
+      case IrOpcode::kSpeculativeNumberEqual: {
+        
         ........ 
-                // Try to use type feedback.        NumberOperationHint hint = NumberOperationHintOf(node->op());        switch (hint) {          case NumberOperationHint::kSigned32:          case NumberOperationHint::kSignedSmall:            if (propagate<T>()) {              
+        
+        // Try to use type feedback.
+        NumberOperationHint hint = NumberOperationHintOf(node->op());
+        switch (hint) {
+          case NumberOperationHint::kSigned32:
+          case NumberOperationHint::kSignedSmall:
+            if (propagate<T>()) {
+              
               ......
-                          } else {              DCHECK(lower<T>());              Node* lhs = node->InputAt(0);              Node* rhs = node->InputAt(1);              if (IsNodeRepresentationTagged(lhs) &&                  IsNodeRepresentationTagged(rhs)) {                
+              
+            } else {
+              DCHECK(lower<T>());
+              Node* lhs = node->InputAt(0);
+              Node* rhs = node->InputAt(1);
+              if (IsNodeRepresentationTagged(lhs) &&
+                  IsNodeRepresentationTagged(rhs)) {
+                
                 .....
-                              } else {                VisitBinop<T>(node,                              CheckedUseInfoAsWord32FromHint(                                  hint, FeedbackSource(), kIdentifyZeros),                              MachineRepresentation::kBit);                ChangeToPureOp(node, Int32Op(node));              }            }            return;
+                
+              } else {
+                VisitBinop<T>(node,
+                              CheckedUseInfoAsWord32FromHint(
+                                  hint, FeedbackSource(), kIdentifyZeros),
+                              MachineRepresentation::kBit);
+                ChangeToPureOp(node, Int32Op(node));
+              }
+            }
+            return;
 ```
 在VisitNode中对于kSpeculativeNumberLessThan节点我们会走到上面的代码处，VisitBinop去处理节点的左右input节点，ChangeToPureOp将节点降低为Int32LessThan。
 
@@ -121,7 +160,9 @@ void ConvertInput(Node* node, int index, UseInfo use,
 这个结果我们可以通过添加--trace-representation这个flag来查看：
 下面就是对SpeculativeNumberLessThan的两个输入节点#34和#81的转换结果：
 ```
-visit #61: SpeculativeNumberLessThan  change: #61:SpeculativeNumberLessThan(@0 #34:NumberConstant) from kRepTaggedSigned to kRepWord32:no-truncation (but identify zeros)  change: #61:SpeculativeNumberLessThan(@1 #81:Select) from kRepWord64 to kRepWord32:no-truncation (but identify zeros)
+visit #61: SpeculativeNumberLessThan
+  change: #61:SpeculativeNumberLessThan(@0 #34:NumberConstant) from kRepTaggedSigned to kRepWord32:no-truncation (but identify zeros)
+  change: #61:SpeculativeNumberLessThan(@1 #81:Select) from kRepWord64 to kRepWord32:no-truncation (but identify zeros)
 ```
 
 我们重点来看实现转换的函数，这里也是漏洞产生的主要位置
@@ -151,6 +192,136 @@ visit #61: SpeculativeNumberLessThan  change: #61:SpeculativeNumberLessThan(@0 
 ```
 在分析转换实现之前，我们先回忆一下select节点的由来，在NumberMax节点的lower阶段，会通过DoMax来降低节点为Int64LessThan+Select，注意此时设置了MachineRepresentation::kWord64，我们继续回到节点转换，这里我们是满足output_rep == MachineRepresentation::kWord64这个判断的，并且此时的输出类型为Type::Unsigned32（上面的from kRepWord64 to kRepWord32中的word32），所以他就会添加TruncateInt64ToInt32()。
 
+=======
+
+```
+      case IrOpcode::kSpeculativeNumberLessThan:
+      case IrOpcode::kSpeculativeNumberLessThanOrEqual:
+      case IrOpcode::kSpeculativeNumberEqual: {
+        
+        ........ 
+        
+        // Try to use type feedback.
+        NumberOperationHint hint = NumberOperationHintOf(node->op());
+        switch (hint) {
+          case NumberOperationHint::kSigned32:
+          case NumberOperationHint::kSignedSmall:
+            if (propagate<T>()) {
+              
+              ......
+              
+            } else {
+              DCHECK(lower<T>());
+              Node* lhs = node->InputAt(0);
+              Node* rhs = node->InputAt(1);
+              if (IsNodeRepresentationTagged(lhs) &&
+                  IsNodeRepresentationTagged(rhs)) {
+                
+                .....
+                
+              } else {
+                VisitBinop<T>(node,
+                              CheckedUseInfoAsWord32FromHint(
+                                  hint, FeedbackSource(), kIdentifyZeros),
+                              MachineRepresentation::kBit);
+                ChangeToPureOp(node, Int32Op(node));
+              }
+            }
+            return;
+```
+在VisitNode中对于kSpeculativeNumberLessThan节点我们会走到上面的代码处，VisitBinop去处理节点的左右input节点，ChangeToPureOp将节点降低为Int32LessThan。
+
+我们接着来看VisitNode：
+```
+  template <Phase T>
+  void VisitBinop(Node* node, UseInfo left_use, UseInfo right_use,
+                  MachineRepresentation output,
+                  Type restriction_type = Type::Any()) {
+    DCHECK_EQ(2, node->op()->ValueInputCount());
+    ProcessInput<T>(node, 0, left_use);
+    ProcessInput<T>(node, 1, right_use);
+    for (int i = 2; i < node->InputCount(); i++) {
+      EnqueueInput<T>(node, i);
+    }
+    SetOutput<T>(node, output, restriction_type);
+  }
+```
+这里他对左右input节点调用了ProcessInput，它是一个模板函数，根据不同的phase调用不同的实现，这里我们是lower阶段，我们去看他的实现：
+```
+template <>
+void RepresentationSelector::ProcessInput<LOWER>(Node* node, int index,
+                                                 UseInfo use) {
+  DCHECK_IMPLIES(use.type_check() != TypeCheckKind::kNone,
+                 !node->op()->HasProperty(Operator::kNoDeopt) &&
+                     node->op()->EffectInputCount() > 0);
+  ConvertInput(node, index, use);
+}
+```
+可以看到他调用了ConvertInput来对节点进行转换：
+```
+void ConvertInput(Node* node, int index, UseInfo use,
+                    Type input_type = Type::Invalid()) {
+    // In the change phase, insert a change before the use if necessary.
+    if (use.representation() == MachineRepresentation::kNone)
+      return;  // No input requirement on the use.
+    Node* input = node->InputAt(index);
+    DCHECK_NOT_NULL(input);
+    NodeInfo* input_info = GetInfo(input);
+    MachineRepresentation input_rep = input_info->representation();
+    if (input_rep != use.representation() ||
+        use.type_check() != TypeCheckKind::kNone) {
+      // Output representation doesn't match usage.
+      TRACE("  change: #%d:%s(@%d #%d:%s) ", node->id(), node->op()->mnemonic(),
+            index, input->id(), input->op()->mnemonic());
+      TRACE("from %s to %s:%s\n",
+            MachineReprToString(input_info->representation()),
+            MachineReprToString(use.representation()),
+            use.truncation().description());
+      if (input_type.IsInvalid()) {
+        input_type = TypeOf(input);
+      }
+      Node* n = changer_->GetRepresentationFor(input, input_rep, input_type,
+                                               node, use);
+      node->ReplaceInput(index, n);
+    }
+  }
+```
+这个结果我们可以通过添加--trace-representation这个flag来查看：
+下面就是对SpeculativeNumberLessThan的两个输入节点#34和#81的转换结果：
+```
+visit #61: SpeculativeNumberLessThan
+  change: #61:SpeculativeNumberLessThan(@0 #34:NumberConstant) from kRepTaggedSigned to kRepWord32:no-truncation (but identify zeros)
+  change: #61:SpeculativeNumberLessThan(@1 #81:Select) from kRepWord64 to kRepWord32:no-truncation (but identify zeros)
+```
+
+我们重点来看实现转换的函数，这里也是漏洞产生的主要位置
+```
+      case IrOpcode::kNumberMax: {
+        
+        Type const lhs_type = TypeOf(node->InputAt(0));
+        Type const rhs_type = TypeOf(node->InputAt(1));
+       
+        ......
+
+        } else if (jsgraph_->machine()->Is64() &&
+                   lhs_type.Is(type_cache_->kSafeInteger) &&
+                   rhs_type.Is(type_cache_->kSafeInteger)) {
+          VisitInt64Binop<T>(node);
+          if (lower<T>()) {
+            lowering->DoMax(node, lowering->machine()->Int64LessThan(),
+                            MachineRepresentation::kWord64);
+          }
+        } else {
+         
+         .....
+            
+        }
+        return;
+      }
+```
+在分析转换实现之前，我们先回忆一下select节点的由来，在NumberMax节点的lower阶段，会通过DoMax来降低节点为Int64LessThan+Select，注意此时设置了MachineRepresentation::kWord64，我们继续回到节点转换，这里我们是满足output_rep == MachineRepresentation::kWord64这个判断的，并且此时的输出类型为Type::Unsigned32（上面的from kRepWord64 to kRepWord32中的word32），所以他就会添加TruncateInt64ToInt32()。
+
+>>>>>>> fdcb715e80e593e0174f251e36a282de41c7428b
 这里直接放了补丁代码方便比较：
 ```
 @@ -949,10 +949,10 @@
