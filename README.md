@@ -210,3 +210,10 @@
 开始挖漏洞了，陆续会在cve或chrome文件夹中更新新的一些记录
 
 </details>
+
+<details>
+<summary>My cve</summary>
+
+CVE-2022-1864 https://bugs.chromium.org/p/chromium/issues/detail?id=1320624
+
+</details>
