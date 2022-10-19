@@ -215,5 +215,6 @@
 <summary>My cve</summary>
 
 CVE-2022-1864 https://bugs.chromium.org/p/chromium/issues/detail?id=1320624
+CVE-2022-3318
 
 </details>
