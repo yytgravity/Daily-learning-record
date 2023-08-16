@@ -70,7 +70,7 @@ sh中增加--js-flags="--allow-natives-syntax"
 #include "base/logging.h"
 #include "content/public/browser/browser_thread.h"
 
-LOG(ERROR) << "sakura in " << std::endl
+LOG(ERROR) << "11111 " << std::endl
 ```
 
 
