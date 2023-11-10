@@ -1,233 +1,265 @@
-//
-// Created by yyt on 2020/5/8.
-//
+#ifndef __STL_ALGOBASE_H__
 
-#ifndef YYT_STL_STL_ALGOBASE_H
-#define YYT_STL_STL_ALGOBASE_H
+#define __STL_ALGOBASE_H__
 
+
+#include "type_traits.h"
 #include "stl_config.h"
+#include <string.h>
 #include "stl_iterator_base.h"
 #include "stl_iterator.h"
-#include "type_traits.h"
-#include <string.h>
+
+
+
 
 __STL_BEGIN_NAMESPACE
-//copy_backward
+//ÈçÏÂÏàµ±ÓÚÊÇÒ»¸öcopy_backwardº¯Êı
+/*ÔÚÒ»¸övectorÖĞ
+½«Ã¿¸öÔªËØÏòºóÒÆÒ»Î»¡£
 
-    template<class _BidirectionalIter1, class _BidirectionalIter2, class _Distance>
-    inline _BidirectionalIter2
-    __copy_backward(_BidirectionalIter1 __first, _BidirectionalIter1 __last, _BidirectionalIter2 __result,
-                    bidirectional_iterator_tag, _Distance *) {
-        while (__first != __last) {
-            *--__result = *--__last;
-        }
-        return __result;
-    }
+Èç¹ûÕıÏò±éÀú²¢copyµÄ»°£¬
+ºóÃæµÄÔªËØ±»Ç°Ãæ¸²¸ÇÁË£¬
+copyµÄ½á¹û¾Í²»¶ÔÁË¡£
 
-    template<class _BidirectionalIter1, class _BidirectionalIter2, class _Distance>
-    inline _BidirectionalIter2
-    __copy_backward(_BidirectionalIter1 __first, _BidirectionalIter1 __last, _BidirectionalIter2 __result,
-                    random_access_iterator_tag, _Distance *) {
-        for (_Distance __n = __last - __first; __n > 0; --__n) {
-            *--__result = *--__last;
-        }
-        return __result;
-    }
+ËùÒÔ±ØĞë·´Ïòcopy¡£
+http://\c.biancheng.net/view/605.html
+¾ÍÖ»ÊÇ·´Ïò¸´ÖÆÁË¶øÒÑ
+*/
+//ÕâÀïËãÆ«ÌØ»¯£¬Ö¸¶¨ÁËİÍÈ¡»ú£¬Ö»ÓĞË«Ïòµü´úÆ÷¿ÉÒÔbackward
+template<class _BidirectionalIter1, class _BidirectionalIter2, class _Distance>
+inline _BidirectionalIter2 __copy_backward(_BidirectionalIter1 __first, _BidirectionalIter1 __last, _BidirectionalIter2 __result, bidirectional_iterator_tag, _Distance *) {
+	while (__first != __last) {
+		*--__result = *--__last;
+	}
+	return __result;
+}
+template<class _BidirectionalIter1, class _BidirectionalIter2, class _Distance>
+inline _BidirectionalIter2 __copy_backward(_BidirectionalIter1 __first, _BidirectionalIter1 __last, _BidirectionalIter2 __result, random_access_iterator_tag, _Distance *) {
+	for (_Distance __n = __last - __first; __n > 0; --__n) {
+		*--__result * --__last;
+	}
+	return __result;
+}
+//https://\blog.csdn.net/dongyu_1989/article/details/80061944
+//https://\blog.csdn.net/chengzi_comm/article/details/51974119
+//°´ÎÒµÄÀí½â£¬¾ÍÏàµ±ÓÚÊÇ copy backwardµÄÔ¤´¦Àíº¯Êı
+template<class _BidirectionalIter1, class _BidirectionalIter2, class _BoolType>
+struct __copy_backward_dispatch {
+	//Á½¸öİÍÈ¡
+	typedef typename iterator_traits<_BidirectionalIter1>::iterator_category _Cat;
+	typedef typename iterator_traits<_BidirectionalIter1>::difference_type _Distance;
 
-    template<class _BidirectionalIter1, class _BidirectionalIter2, class _BoolType>
-    struct __copy_backward_dispatch {
-        typedef typename iterator_traits<_BidirectionalIter1>::iterator_category _Cat;
-        typedef typename iterator_traits<_BidirectionalIter1>::difference_type _Distance;
+	static _BidirectionalIter2
+		copy(_BidirectionalIter1 __first, _BidirectionalIter1 __last, _BidirectionalIter2 __result) {
+		return __copy_backward(__first, __last, __result, _Cat(), (_Distance *)0);
+	}
+};
+//ÌØ»¯°æ±¾1£¬ÓĞ¡°ÎŞ¹Ø½ôÒªµÄ¸³Öµ²Ù×÷·û¡± »áÖ´ĞĞÏÂÃæÕâ¸öº¯Êı£º
 
-        static _BidirectionalIter2
-        copy(_BidirectionalIter1 __first, _BidirectionalIter1 __last, _BidirectionalIter2 __result) {
-            return __copy_backward(__first, __last, __result, _Cat(), (_Distance *) 0);
-        }
-    };
+/*
+memmoveµÄ´¦Àí´ëÊ©£º
 
-    template<class _Tp>
-    struct __copy_backward_dispatch<_Tp *, _Tp *, __true_type> {
-        static _Tp *copy(const _Tp *__first, const _Tp *__last, _Tp *__result) {
-            const ptrdiff_t _Num = __last - __first;
-            memmove(__result - _Num, __first, sizeof(_Tp) * _Num);
-            return __result - _Num;
-        }
-    };
+£¨1£©µ±Ô´ÄÚ´æµÄÊ×µØÖ·µÈÓÚÄ¿±êÄÚ´æµÄÊ×µØÖ·Ê±£¬²»½øĞĞÈÎºÎ¿½±´
 
-    template<class _Tp>
-    struct __copy_backward_dispatch<const _Tp *, _Tp *, __true_type> {
-        static _Tp *copy(const _Tp *__first, const _Tp *__last, _Tp *__result) {
-            return __copy_backward_dispatch<_Tp *, _Tp *, __true_type>::copy(__first, __last, __result);
-        }
-    };
+£¨2£©µ±Ô´ÄÚ´æµÄÊ×µØÖ·´óÓÚÄ¿±êÄÚ´æµÄÊ×µØÖ·Ê±£¬ÊµĞĞÕıÏò¿½±´
 
-    template<class _BI1, class _BI2>
-    inline _BI2 copy_backward(_BI1 __first, _BI1 __last, _BI2 __result) {
-        typedef typename __type_traits<typename iterator_traits<_BI2>::value_type>::has_trivial_assignment_operator _Trivial;
-        return __copy_backward_dispatch<_BI1, _BI2, _Trivial>::copy(__first, __last, __result);
-    }
+£¨3£©µ±Ô´ÄÚ´æµÄÊ×µØÖ·Ğ¡ÓÚÄ¿±êÄÚ´æµÄÊ×µØÖ·Ê±£¬ÊµĞĞ·´Ïò¿½±´
 
-//copy
-    template<class _InputIter, class _OutputIter>
-    inline _OutputIter copy(_InputIter __first, _InputIter __last, _OutputIter __result) {
-        return __copy_aux(__first, __last, __result, __VALUE_TYPE(__first));
-    }
+memcpyºÍmemmove¶¼ÊÇ±ê×¼C¿âº¯Êı£¬ÔÚ¿âº¯Êıstring.hÖĞ£¬ËüÃÇ¶¼ÊÇ´ÓsrcËùÖ¸ÏòµÄÄÚ´æÖĞ¸´ÖÆcount¸ö×Ö½Úµ½destËùÖ¸ÏòµÄÄÚ´æÖĞ£¬²¢·µ»ØdestµÄÖµ
+void *memmove(void *dest,const void *src,size_t count);
+*/
+template<class _Tp>
+struct __copy_backward_dispatch<_Tp *, _Tp *, __true_type> {
+	static _Tp *copy(const _Tp *__first, const _Tp *__last, _Tp *__result) {
+		const ptrdiff_t _Num = __last - __first;
+		memmove(__result - _Num, __first, sizeof(_Tp) * _Num);
+		return __result - _Num;
+	}
+};
 
-    template<class _InputIter, class _OutputIter, class _Tp>
-    inline _OutputIter __copy_aux(_InputIter __first, _InputIter __last, _OutputIter __result, _Tp *) {
-        typedef typename __type_traits<_Tp>::has_trivial_assignment_operator _Trivial;
-        return __copy_aux2(__first, __last, __result, _Trivial());
-    }
 
-    template<class _InputIter, class _OutputIter>
-    inline _OutputIter __copy_aux2(_InputIter __first, _InputIter __last, _OutputIter __result, __false_type) {
-        return __copy(__first, __last, __result, __ITERATOR_CATEGORY(__first), __DISTANCE_TYPE(__first));
-    }
+//ÌØ»¯°æ±¾2£¬Ã»ÓĞ¡°ÎŞ¹Ø½ôÒªµÄ¸³Öµ²Ù×÷·û¡± »áÖ´ĞĞÏÂÃæÕâ¸öº¯Êı,Á½¸ö¶¼ÊÇtruetype,ÉÏÃæÕë¶ÔÆÕÍ¨£¬ÏÂÃæÕë¶Ôconst
+template<class _Tp>
+struct __copy_backward_dispatch<const _Tp *, _Tp *, __true_type> {
+	static _Tp *copy(const _Tp *__first, const _Tp *__last, _Tp *__result) {
+		return __copy_backward_dispatch<_Tp *, _Tp *, __true_type>::copy(__first, __last, __result);
+	}
+};
 
-    template<class _InputIter, class _OutputIter>
-    inline _OutputIter __copy_aux2(_InputIter __first, _InputIter __last, _OutputIter __result, __true_type) {
-        return __copy(__first, __last, __result, __ITERATOR_CATEGORY(__first), __DISTANCE_TYPE(__first));
-    }
+template<class _BI1, class _BI2>
+inline _BI2 copy_backward(_BI1 __first, _BI1 __last, _BI2 __result) {
+	typedef typename __type_traits<typename iterator_traits<_BI2>::value_type>::has_trivial_assignment_operator _Trivial;
+	return __copy_backward_dispatch<_BI1, _BI2, _Trivial>::copy(__first, __last, __result);
+}
+//copy assignment operator ¸³Öµº¯Êı
+////Ã»ÓĞÏÔÊ½¶¨Òåctor/dtor/copy/assignemtËùÒÔ¶¼ÊÇtrivial
+//ÏÔÊ½¶¨ÒåÁË¹¹Ôìº¯Êı£¬ËùÒÔÊÇnon-trivial ctor
+//https://\www.daimajiaoliu.com/daima/4edeeb6bc100410
+//Èç¹û¹¹Ôìº¯ÊıÖĞĞ´ÁË£¬ÄÇ¾ÍÊÇno-trivial
+//¿ÉÄÜ´ó¼Ò»áÓĞÒÉÎÊ£¬trivial_assignment_operator µÄÓÃÍ¾£¬¼´²»ÖØÒªµÄ£¬»¹ÓĞnon-trivial ¾ÍÊÇÖØÒªµÄ£¬ÕâÁ½¸öÖªÊ¶µã»á°üº¬Ğéº¯Êı£¬»òÕß£¬Ğéº¯Êı±í£¬¼´Ğé±í£¬Ò²¾ÍÊÇ¶àÌ¬µÄ»ù´¡£¬
 
-    template<class _Tp>
-    inline _Tp *__copy_aux2(const _Tp *__first, const _Tp *__last, _Tp *__result, __true_type) {
-        return __copy_trivial(__first, __last, __result);
-    }
+//https://\blog.csdn.net/lihao21/article/details/50688337
+/*
+Æä´ÎÊÇ·º»¯,ÔÙÕë¶ÔÔ­ÉúÖ¸Õë×ö³öÌØ»¯,Èç¹ûÖ¸ÕëËùÖ¸¶ÔÏóÓµÓĞµÄÊÇtrivial assignment operator,¸´ÖÆ²Ù×÷¿ÉÒÔ²»Í¨¹ıËü(Ò²¾ÍÊÇctor),Ò²¾ÍÊÇËµÎÒÃÇÖ±½ÓÓÃmemmoveÀ´Íê³É¿½±´.Èç¹û¶ÔÓÚÔ­ÉúÖ¸Õë,ËüÖ¸ÏòµÄ¶ÔÏóÓµÓĞµÄÊÇnon-trivial assignment operator,ÎÒÃÇ¾ÍÊ¹ÓÃforÑ­»·À´ÂıÂı¿½±´ÁË.
 
-    template<class _Tp>
-    inline _Tp *
-    __copy_trivial(const _Tp *__first, const _Tp *__last, _Tp *__result) {
-        memmove(__result, __first, sizeof(_Tp) * (__last - __first));
-        return __result + (__last - __first);
-    }
+*/
+template<class _Tp>
+inline _Tp *__copy_trivial(const _Tp *__first, const _Tp *__last, _Tp *__result) {
+	memmove(__result, __first, sizeof(_Tp) * (__last - __first));
+	return __result + (__last - __first);
+}
 
-    template<class _InputIter, class _OutputIter, class _Distance>
-    inline _OutputIter
-    __copy(_InputIter __first, _InputIter __last, _OutputIter __result, input_iterator_tag, _Distance *) {
-        for (; __first != __last; ++__first, ++__result) {
-            *__result = *__first;
-        }
-        return *__result;
-    }
 
+//ÒÔÏÂÎªcopyº¯Êı
+template<class _Tp>
+inline _Tp *__copy_aux2(const _Tp *__first, const _Tp *__last, _Tp *__result, __true_type) {
+	return __copy_trivial(__first, __last, __result);
+}
+template<class _InputIter, class _OutputIter, class _Tp>
+inline _OutputIter __copy_aux(_InputIter __first, _InputIter __last, _OutputIter __result, _Tp *) {
+	typedef typename __type_traits<_Tp>::has_trivial_assignment_operator _Trivial;
+	return __copy_aux2(__first, __last, __result, _Trivial());
+}
+
+//https://\www.jianshu.com/p/dc81e085b445
+//µÚÒ»¸öÏàµ±ÓÚcopyµÄ½Ó¿Ú£¬µ÷ÓÃÀïÃæµÄcopy¸¨Öúº¯Êı½øĞĞcopy£¬Èı¸öµü´úÆ÷£¬Í·£¬Î²£¬Êä³ö
+template<class _InputIter, class _OutputIter>
+inline _OutputIter copy(_InputIter __first, _InputIter __last, _OutputIter __result) {
+	return __copy_aux(__first, __last, __result, __VALUE_TYPE(__first));
+}
+//copy¸¨Öúº¯Êı£¬µ÷ÓÃcopy¸¨Öú2
+
+
+
+template<class _InputIter, class _OutputIter, class _Distance>
+inline _OutputIter __copy(_InputIter __first, _InputIter __last, _OutputIter __result, input_iterator_tag, _Distance *) {
+	for (; __first != __last; ++__first, ++__result) {
+		*__result = *__first;
+	}
+	return *__result;
+}
+
+/*
+fillº¯ÊıµÄ×÷ÓÃÊÇ£º½«Ò»¸öÇø¼äµÄÔªËØ¶¼¸³ÓèvalÖµ¡£º¯Êı²ÎÊı£ºfill(first,last,val);//firstÎªÈİÆ÷µÄÊ×µü´úÆ÷£¬lastÎªÈİÆ÷µÄÄ©µü´úÆ÷£¬valÎª½«ÒªÌæ»»µÄÖµ¡£
+fill_nº¯ÊıµÄ×÷ÓÃÊÇ£º¸øÄãÒ»¸öÆğÊ¼µã£¬È»ºóÔÙ¸øÄãÒ»¸öÊıÖµcountºÍval¡£ °Ñ´ÓÆğÊ¼µã¿ªÊ¼ÒÀ´Î¸³Óècount¸öÔªËØvalµÄÖµ¡£ ×¢Òâ£º ²»ÄÜÔÚÃ»ÓĞÔªËØµÄ¿ÕÈİÆ÷ÉÏµ÷ÓÃfill_nº¯ÊıÀıÌâ£º¸øÄãn¸öÊı£¬È»ºóÊäÈëÒ»Ğ©²Ù×÷£ºstart,count,paint
+*/
 //fill
-    template<class _ForwardIter, class _Tp>
-    void fill(_ForwardIter __first, _ForwardIter __last, const _Tp &__value) {
-        for (; __first != __last; ++__first) {
-            *__first = __value;
-        }
-    }
-
+template<class _ForwardIter, class _Tp>
+void fill(_ForwardIter __first, _ForwardIter __last, const _Tp &__value) {
+	for (; __first != __last; ++__first) {
+		*__first = __value;
+	}
+}
 //fill_n
-    template<class _OutputIter, class _Size, class _Tp>
-    _OutputIter fill_n(_OutputIter __first, _Size __n, const _Tp &__value) {
-        for (; __n > 0; --__n, ++__first) {
-            *__first = __value;
-        }
-        return __first;
-    }
+template<class _OutputIter, class _Size, class _Tp>
+_OutputIter fill_n(_OutputIter __first, _Size __n, const _Tp &__value) {
+	for (; __n > 0; --__n, ++__first) {
+		*__first = __value;
+	}
+	return __first;
+}
+//min and max ×î»ù±¾µÄ£¬µ±È»ÎÒÃÇ¿ÉÒÔ×Ô¼ºÔö¼Ó±È½Ïº¯Êı
+template<class _Tp>
+inline const _Tp &min(const _Tp &__a, const _Tp &__b) {
+	return __b < __a ? __b : __a;
+}
 
-//min and max
-    template<class _Tp>
-    inline const _Tp &min(const _Tp &__a, const _Tp &__b) {
-        return __b < __a ? __b : __a;
-    }
+template<class _Tp>
+inline const _Tp &max(const _Tp &__a, const _Tp &__b) {
+	return __a < __b ? __b : __a;
+}
 
-    template<class _Tp>
-    inline const _Tp &max(const _Tp &__a, const _Tp &__b) {
-        return __a < __b ? __b : __a;
-    }
+template<class _Tp, class _Compare>
+inline const _Tp &min(const _Tp &__a, const _Tp &__b, _Compare __comp) {
+	return __comp(__b, __a) ? __b : __a;
+}
 
-    template<class _Tp, class _Compare>
-    inline const _Tp &min(const _Tp &__a, const _Tp &__b, _Compare __comp) {
-        return __comp(__b, __a) ? __b : __a;
-    }
-
-    template<class _Tp, class _Compare>
-    inline const _Tp &max(const _Tp &__a, const _Tp &__b, _Compare __comp) {
-        return __comp(__a, __b) ? __b : __a;
-    }
+template<class _Tp, class _Compare>
+inline const _Tp &max(const _Tp &__a, const _Tp &__b, _Compare __comp) {
+	return __comp(__a, __b) ? __b : __a;
+}
 
 //swap and iterator_swap
-    template<class _ForwardIter1, class _ForwardIter2, class _Tp>
-    inline void __iter_swap(_ForwardIter1 __a, _ForwardIter2 __b, _Tp *) {
-        _Tp __tmp = *__a;
-        *__a = *__b;
-        *__b = __tmp;
-//    swap(*__a, *__b);
-    }
+template<class _ForwardIter1, class _ForwardIter2, class _Tp>
+inline void __iter_swap(_ForwardIter1 __a, _ForwardIter2 __b, _Tp *) {
+	_Tp __tmp = *__a;
+	*__a = *__b;
+	*__b = __tmp;
+	//    swap(*__a, *__b);
+}
+//µü´úÆ÷µÄswap
 
-    template<class _ForwardIter1, class _ForwardIter2>
-    inline void iter_swap(_ForwardIter1 __a, _ForwardIter2 __b) {
-        __iter_swap(__a, __b, __VALUE_TYPE(__a));
-    }
+template<class _ForwardIter1, class _ForwardIter2>
+inline void iter_swap(_ForwardIter1 __a, _ForwardIter2 __b) {
+	__iter_swap(__a, __b, __VALUE_TYPE(__a));
+}
 
-    template<class _Tp>
-    inline void swap(_Tp &__a, _Tp &__b) {
-        //å¼•ç”¨æœ¬èº«æ˜¯ä¸èƒ½å˜çš„ï¼Œåªä¼šå˜å¼•ç”¨æŒ‡å‘çš„å€¼ã€‚
-        _Tp __tmp = __a;
-        __a = __b;
-        __b = __tmp;
-    }
+template<class _Tp>
+inline void swap(_Tp &__a, _Tp &__b) {
+	//ÒıÓÃ±¾ÉíÊÇ²»ÄÜ±äµÄ£¬Ö»»á±äÒıÓÃÖ¸ÏòµÄÖµ¡£
+	_Tp __tmp = __a;
+	__a = __b;
+	__b = __tmp;
+}
 
-    //equal
-    template<class _InputIter1, class _InputIter2, class _BinaryPredicate>
-    inline bool equal(_InputIter1 __first1, _InputIter1 __last1,
-                      _InputIter2 __first2, _BinaryPredicate __binary_pred) {
-        for (; __first1 != __last1; ++__first1, ++__first2)
-            if (!__binary_pred(*__first1, *__first2))
-                return false;
-        return true;
-    }
+//equal
+template<class _InputIter1, class _InputIter2, class _BinaryPredicate>
+inline bool equal(_InputIter1 __first1, _InputIter1 __last1,
+	_InputIter2 __first2, _BinaryPredicate __binary_pred) {
+	for (; __first1 != __last1; ++__first1, ++__first2)
+		if (!__binary_pred(*__first1, *__first2))
+			return false;
+	return true;
+}
 
-    template<class _InputIter1, class _InputIter2>
-    inline bool equal(_InputIter1 __first1, _InputIter1 __last1,
-                      _InputIter2 __first2) {
-        for (; __first1 != __last1; ++__first1, ++__first2)
-            if (*__first1 != *__first2)
-                return false;
-        return true;
-    }
+template<class _InputIter1, class _InputIter2>
+inline bool equal(_InputIter1 __first1, _InputIter1 __last1,
+	_InputIter2 __first2) {
+	for (; __first1 != __last1; ++__first1, ++__first2)
+		if (*__first1 != *__first2)
+			return false;
+	return true;
+}
 
 //--------------------------------------------------
 // lexicographical_compare and lexicographical_compare_3way.
 // (the latter is not part of the C++ standard.)
 
-    template<class _InputIter1, class _InputIter2>
-    bool lexicographical_compare(_InputIter1 __first1, _InputIter1 __last1,
-                                 _InputIter2 __first2, _InputIter2 __last2) {
-        for (; __first1 != __last1 && __first2 != __last2; ++__first1, ++__first2) {
-            if (*__first1 < *__first2)
-                return true;
-            if (*__first2 < *__first1)
-                return false;
-        }
-        return __first1 == __last1 && __first2 != __last2;
-    }
+template<class _InputIter1, class _InputIter2>
+bool lexicographical_compare(_InputIter1 __first1, _InputIter1 __last1,
+	_InputIter2 __first2, _InputIter2 __last2) {
+	for (; __first1 != __last1 && __first2 != __last2; ++__first1, ++__first2) {
+		if (*__first1 < *__first2)
+			return true;
+		if (*__first2 < *__first1)
+			return false;
+	}
+	return __first1 == __last1 && __first2 != __last2;
+}
 
-    template<class _InputIter1, class _InputIter2, class _Compare>
-    bool lexicographical_compare(_InputIter1 __first1, _InputIter1 __last1,
-                                 _InputIter2 __first2, _InputIter2 __last2,
-                                 _Compare __comp) {
-        for (; __first1 != __last1 && __first2 != __last2; ++__first1, ++__first2) {
-            if (__comp(*__first1, *__first2))
-                return true;
-            if (__comp(*__first2, *__first1))
-                return false;
-        }
-        return __first1 == __last1 && __first2 != __last2;
-    }
+template<class _InputIter1, class _InputIter2, class _Compare>
+bool lexicographical_compare(_InputIter1 __first1, _InputIter1 __last1,
+	_InputIter2 __first2, _InputIter2 __last2,
+	_Compare __comp) {
+	for (; __first1 != __last1 && __first2 != __last2; ++__first1, ++__first2) {
+		if (__comp(*__first1, *__first2))
+			return true;
+		if (__comp(*__first2, *__first1))
+			return false;
+	}
+	return __first1 == __last1 && __first2 != __last2;
+}
 
-    inline bool
-    lexicographical_compare(const unsigned char *__first1,
-                            const unsigned char *__last1,
-                            const unsigned char *__first2,
-                            const unsigned char *__last2) {
-        const size_t __len1 = __last1 - __first1;
-        const size_t __len2 = __last2 - __first2;
-        const int __result = memcmp(__first1, __first2, min(__len1, __len2));
-        return __result != 0 ? __result < 0 : __len1 < __len2;
-    }
-
+inline bool
+lexicographical_compare(const unsigned char *__first1,
+	const unsigned char *__last1,
+	const unsigned char *__first2,
+	const unsigned char *__last2) {
+	const size_t __len1 = __last1 - __first1;
+	const size_t __len2 = __last2 - __first2;
+	const int __result = memcmp(__first1, __first2, min(__len1, __len2));
+	return __result != 0 ? __result < 0 : __len1 < __len2;
+}
 __STL_END_NAMESPACE
-#endif //yyt_STL_STL_ALGOBASE_H
+
+#endif // !__STL_ALGOBASE_H__

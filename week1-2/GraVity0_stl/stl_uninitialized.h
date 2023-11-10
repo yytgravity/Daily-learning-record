@@ -4,140 +4,144 @@
 
 #ifndef YYT_STL_STL_UNINITIALIZED_H
 #define YYT_STL_STL_UNINITIALIZED_H
+#include "type_traits.h"
 #include "stl_config.h"
 #include "stl_iterator_base.h"
-#include "type_traits.h"
+
 #include "stl_construct.h"
 #include "stl_algobase.h"
 __STL_BEGIN_NAMESPACE
 
 /*
-                                                            ç‰¹åŒ–
-                                                            ____>___uninitialized_copy_aux(.,_false_type)
-                                                            |
-                                                            |NO _false_type --> _Construct
-                                                            |
-uninitialized_copy() -----> æ³›åŒ–_>__uninitialized_copy -- is POD ï¼Ÿ
-                                                            |
-                                                            |YES _true_type --> copy
-                                                            |
-                                                            |_ç‰¹åŒ–_>__uninitialized_copy_aux(,_true_type)
+															ÌØ»¯
+															____>___uninitialized_copy_aux(.,_false_type)
+															|
+															|NO _false_type --> _Construct
+															|
+uninitialized_copy() -----> ·º»¯_>__uninitialized_copy -- is POD £¿
+															|
+															|YES _true_type --> copy
+															|
+															|_ÌØ»¯_>__uninitialized_copy_aux(,_true_type)
 
- å¦‚æœæ˜¯POD typeï¼Œå°±æ˜¯åŸºæœ¬æ•°æ®ç±»å‹(å°±æ˜¯å†…ç½®ç±»å‹æˆ–æ™®é€šç»“æ„ä¸ç±»(æ²¡æœ‰æŒ‡é’ˆçš„æˆå‘˜æ•°æ®)ç­‰)é‚£ä¹ˆå°±ç›´æ¥æ‹·è´å³å¯
- å¦‚æœä¸æ˜¯POD type å°±éœ€è¦ä¾æ¬¡è°ƒç”¨æ„é€ å‡½æ•°åˆ›å»ºæ•°æ®
+ Èç¹ûÊÇPOD type£¬¾ÍÊÇ»ù±¾Êı¾İÀàĞÍ(¾ÍÊÇÄÚÖÃÀàĞÍ»òÆÕÍ¨½á¹¹ÓëÀà(Ã»ÓĞÖ¸ÕëµÄ³ÉÔ±Êı¾İ)µÈ)ÄÇÃ´¾ÍÖ±½Ó¿½±´¼´¿É
+ Èç¹û²»ÊÇPOD type ¾ÍĞèÒªÒÀ´Îµ÷ÓÃ¹¹Ôìº¯Êı´´½¨Êı¾İ
  */
 
 template <class _InputIter, class _ForwardIter>
-inline _ForwardIter uninitialized_copy(_InputIter __first, _InputIter __last, _ForwardIter __result){
-    return __uninitialized_copy(__first, __last, __result, __VALUE_TYPE(__result));
+inline _ForwardIter __uninitialized_copy_aux(_InputIter __first, _InputIter __last, _ForwardIter __result, __false_type) {
+	_ForwardIter __cur = __result;
+	try {
+		for (; __first != __last; ++__first, ++__cur) {
+			_Construct(&*__cur, *__first);
+		}
+		return __cur;
+	}
+	catch (...) { _Destroy(__result, __cur); throw; }
+}
+template <class _InputIter, class _ForwardIter>
+inline _ForwardIter __uninitialized_copy_aux(_InputIter __first, _InputIter __last, _ForwardIter __result, __true_type) {
+	return copy(__first, __last, __result);
 }
 template <class _InputIter, class _ForwardIter, class _Tp>
-inline _ForwardIter __uninitialized_copy(_InputIter __first, _InputIter __last, _ForwardIter __result, _Tp*){
-    typedef typename __type_traits<_Tp>::is_POD_type _Is_POD;
-    return __uninitialized_copy_aux(__first, __last, __result, _Is_POD());
+inline _ForwardIter __uninitialized_copy(_InputIter __first, _InputIter __last, _ForwardIter __result, _Tp*) {
+	typedef typename __type_traits<_Tp>::is_POD_type _Is_POD;
+	return __uninitialized_copy_aux(__first, __last, __result, _Is_POD());
 }
 template <class _InputIter, class _ForwardIter>
-inline _ForwardIter __uninitialized_copy_aux(_InputIter __first, _InputIter __last, _ForwardIter __result, __false_type){
-    _ForwardIter __cur = __result;
-    try{
-        for(;__first != __last; ++__first, ++__cur){
-            _Construct(&*__cur, *__first);
-        }
-        return __cur;
-    }
-    catch(...) { _Destroy(__result, __cur); throw; }
+inline _ForwardIter uninitialized_copy(_InputIter __first, _InputIter __last, _ForwardIter __result) {
+	return __uninitialized_copy(__first, __last, __result, __VALUE_TYPE(__result));
 }
-template <class _InputIter, class _ForwardIter>
-inline _ForwardIter __uninitialized_copy_aux(_InputIter __first, _InputIter __last, _ForwardIter __result, __true_type){
-    return copy(__first, __last, __result);
-}
+
+
+
 
 
 /*
-                                                            ç‰¹åŒ–
-                                                            ____>__uninitialized_fill_aux(.,_false_type)
-                                                            |
-                                                            |NO _false_type --> _Construct
-                                                            |
-uninitialized_fill() -----> æ³›åŒ–_>__uninitialized_fill -- is POD ï¼Ÿ
-                                                            |
-                                                            |YES _true_type --> fill
-                                                            |
-                                                            |_ç‰¹åŒ–_>__uninitialized_fill_aux(,_true_type)
+															ÌØ»¯
+															____>__uninitialized_fill_aux(.,_false_type)
+															|
+															|NO _false_type --> _Construct
+															|
+uninitialized_fill() -----> ·º»¯_>__uninitialized_fill -- is POD £¿
+															|
+															|YES _true_type --> fill
+															|
+															|_ÌØ»¯_>__uninitialized_fill_aux(,_true_type)
 
 */
 template <class _ForwardIter, class _Tp>
-inline void uninitialized_fill(_ForwardIter __first, _ForwardIter __last, const _Tp& __x){
-    __uninitialized_fill(__first, __last, __x, __VALUE_TYPE(__first));
+inline void uninitialized_fill(_ForwardIter __first, _ForwardIter __last, const _Tp& __x) {
+	__uninitialized_fill(__first, __last, __x, __VALUE_TYPE(__first));
 }
 template <class _ForwardIter, class _Tp, class _Tp1>
-inline void __uninitialized_fill(_ForwardIter __first, _ForwardIter __last, const _Tp& __x, _Tp1*){
-    typedef typename __type_traits<_Tp1>::is_POD_type _Is_POD;
-    return __uninitialized_fill_aux(__first, __last, __x, _Is_POD());
+inline void __uninitialized_fill(_ForwardIter __first, _ForwardIter __last, const _Tp& __x, _Tp1*) {
+	typedef typename __type_traits<_Tp1>::is_POD_type _Is_POD;
+	return __uninitialized_fill_aux(__first, __last, __x, _Is_POD());
 }
 template <class _ForwardIter, class _Tp>
-inline void __uninitialized_fill_aux(_ForwardIter __first, _ForwardIter __last, const _Tp& __x, __false_type){
-    _ForwardIter __cur = __first;
-    try{
-        for(;__cur != __last; ++__cur){
-            construct(&*__cur, __x);
-        }
-    }
-    catch(...){
-        destroy(__first, __cur);
-    }
+inline void __uninitialized_fill_aux(_ForwardIter __first, _ForwardIter __last, const _Tp& __x, __false_type) {
+	_ForwardIter __cur = __first;
+	try {
+		for (; __cur != __last; ++__cur) {
+			construct(&*__cur, __x);
+		}
+	}
+	catch (...) {
+		destroy(__first, __cur);
+	}
 }
 // Valid if copy construction is equivalent to assignment, and if the
 // destructor is trivial.
 template <class _ForwardIter, class _Tp>
 inline void
 __uninitialized_fill_aux(_ForwardIter __first, _ForwardIter __last,
-                         const _Tp& __x, __true_type)
+	const _Tp& __x, __true_type)
 {
-    fill(__first, __last, __x);
+	fill(__first, __last, __x);
 }
 
 /*
-                                                            ç‰¹åŒ–
-                                                            ____>__uninitialized_fill_n_aux(.,_false_type)
-                                                            |
-                                                            |NO _false_type --> _Construct
-                                                            |
-uninitialized_fill_n() -----> æ³›åŒ–_>__uninitialized_fill_n -- is POD ï¼Ÿ
-                                                            |
-                                                            |YES _true_type --> fill
-                                                            |
-                                                            |_ç‰¹åŒ–_>__uninitialized_fill_n_aux(,_true_type)
+															ÌØ»¯
+															____>__uninitialized_fill_n_aux(.,_false_type)
+															|
+															|NO _false_type --> _Construct
+															|
+uninitialized_fill_n() -----> ·º»¯_>__uninitialized_fill_n -- is POD £¿
+															|
+															|YES _true_type --> fill
+															|
+															|_ÌØ»¯_>__uninitialized_fill_n_aux(,_true_type)
 
 */
 
 template <class _ForwardIter, class _Size, class _Tp>
-inline _ForwardIter __uninitialized_fill_n_aux(_ForwardIter __first, _Size __n, const _Tp& __x, __false_type){
-    _ForwardIter __cur = __first;
-    try{
-        for(;__n > 0;--__n, ++__cur){
-            construct(&*__cur, __x);
-        }
-        //note
-        return __cur;
-    }
-    catch(...){
-        destroy(__first,__cur);
-    }
+inline _ForwardIter __uninitialized_fill_n_aux(_ForwardIter __first, _Size __n, const _Tp& __x, __false_type) {
+	_ForwardIter __cur = __first;
+	try {
+		for (; __n > 0; --__n, ++__cur) {
+			construct(&*__cur, __x);
+		}
+		//note
+		return __cur;
+	}
+	catch (...) {
+		destroy(__first, __cur);
+	}
 }
 template <class _ForwardIter, class _Size, class _Tp>
-inline _ForwardIter __uninitialized_fill_n_aux(_ForwardIter __first, _Size __n, const _Tp& __x, __true_type){
-    return fill_n(__first, __n, __x);
+inline _ForwardIter __uninitialized_fill_n_aux(_ForwardIter __first, _Size __n, const _Tp& __x, __true_type) {
+	return fill_n(__first, __n, __x);
 }
 
 template <class _ForwardIter, class _Size, class _Tp, class _Tp1>
-inline _ForwardIter __uninitialized_fill_n(_ForwardIter __first, _Size __n, const _Tp& __x, _Tp1*){
-    typedef typename __type_traits<_Tp1>::is_POD_type _Is_POD;
-    return __uninitialized_fill_n_aux(__first, __n, __x, _Is_POD());
+inline _ForwardIter __uninitialized_fill_n(_ForwardIter __first, _Size __n, const _Tp& __x, _Tp1*) {
+	typedef typename __type_traits<_Tp1>::is_POD_type _Is_POD;
+	return __uninitialized_fill_n_aux(__first, __n, __x, _Is_POD());
 }
 template <class _ForwardIter, class _Size, class _Tp>
-inline _ForwardIter uninitialized_fill_n(_ForwardIter __first, _Size __n, const _Tp& __x){
-    return __uninitialized_fill_n(__first, __n, __x, __VALUE_TYPE(__first));
+inline _ForwardIter uninitialized_fill_n(_ForwardIter __first, _Size __n, const _Tp& __x) {
+	return __uninitialized_fill_n(__first, __n, __x, __VALUE_TYPE(__first));
 }
 
 __STL_END_NAMESPACE
